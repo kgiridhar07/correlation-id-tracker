@@ -7,7 +7,7 @@
 const LOG_LEVELS = Object.freeze({ OFF: 0, ERROR: 1, WARN: 2, INFO: 3, DEBUG: 4 });
 
 /** Current log level — set to WARN for production, DEBUG during development */
-let currentLevel = LOG_LEVELS.WARN;
+let currentLevel = LOG_LEVELS.DEBUG;
 
 const PREFIX = '[CorrTracker]';
 
