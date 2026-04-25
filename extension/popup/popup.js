@@ -23,6 +23,25 @@ const statusText = document.getElementById('statusText');
 /** Full event list cached in popup (newest first) */
 let allEvents = [];
 
+// ── Filtering ────────────────────────────────────────────────────────────────
+
+function applyFilter() {
+  const query = (searchInput.value || '').toLowerCase().trim();
+  if (!query) {
+    renderEvents(allEvents);
+    return;
+  }
+  const filtered = allEvents.filter((evt) =>
+    evt.correlationId.toLowerCase().includes(query) ||
+    evt.url.toLowerCase().includes(query) ||
+    (evt.method || '').toLowerCase().includes(query) ||
+    (evt.sourceType || '').toLowerCase().includes(query)
+  );
+  renderEvents(filtered);
+}
+
+const debouncedFilter = debounce(applyFilter, UI.DEBOUNCE_MS);
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 
 initRenderer(eventsBody, emptyState);
@@ -46,25 +65,6 @@ async function loadEvents() {
     setStatus('Error: ' + err.message);
   }
 }
-
-// ── Filtering ────────────────────────────────────────────────────────────────
-
-function applyFilter() {
-  const query = (searchInput.value || '').toLowerCase().trim();
-  if (!query) {
-    renderEvents(allEvents);
-    return;
-  }
-  const filtered = allEvents.filter((evt) =>
-    evt.correlationId.toLowerCase().includes(query) ||
-    evt.url.toLowerCase().includes(query) ||
-    (evt.method || '').toLowerCase().includes(query) ||
-    (evt.sourceType || '').toLowerCase().includes(query)
-  );
-  renderEvents(filtered);
-}
-
-const debouncedFilter = debounce(applyFilter, UI.DEBOUNCE_MS);
 
 // ── Export ────────────────────────────────────────────────────────────────────
 

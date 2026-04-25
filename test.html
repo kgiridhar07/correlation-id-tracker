@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head><title>Correlation ID Tracker - Test Page</title></head>
+<body>
+  <h2>Correlation ID Tracker - Test</h2>
+  <button id="btn" style="padding:12px 24px; font-size:16px; cursor:pointer;">
+    Send Test Request
+  </button>
+  <p id="result" style="margin-top:16px; font-size:14px;"></p>
+  <script>
+    document.getElementById("btn").addEventListener("click", function() {
+      document.getElementById("result").textContent = "Sending...";
+      fetch("https://httpbin.org/anything/api/test", {
+        headers: {
+          "x-correlation-id": "test-corr-123"
+        }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById("result").textContent = "Success! Check the extension popup.";
+        console.log("Response:", data);
+      })
+      .catch(function(err) {
+        document.getElementById("result").textContent = "Error: " + err.message;
+      });
+    });
+  </script>
+</body>
+</html>
