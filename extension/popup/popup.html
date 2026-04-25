@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=600">
+  <title>Correlation ID Tracker</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="header">
+    <h1>Correlation ID Tracker</h1>
+    <div class="header-actions">
+      <input type="text" id="searchInput" placeholder="Search by ID, URL, method..." autocomplete="off">
+      <button id="btnRefresh" title="Refresh">&#x21bb;</button>
+      <button id="btnClear" title="Clear all logs">&#x1f5d1;</button>
+      <button id="btnExportJson" title="Export JSON">JSON</button>
+      <button id="btnExportCsv" title="Export CSV">CSV</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="table-wrap">
+      <table id="eventsTable">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Method</th>
+            <th>URL</th>
+            <th>Correlation ID</th>
+            <th>Source</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="eventsBody">
+          <!-- rows rendered by tableRenderer.js -->
+        </tbody>
+      </table>
+    </div>
+    <p id="emptyState" class="empty-state" hidden>No correlation events captured yet.</p>
+  </main>
+
+  <footer class="footer">
+    <span id="statusText">Ready</span>
+  </footer>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
