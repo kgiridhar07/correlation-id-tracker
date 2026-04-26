@@ -16,6 +16,14 @@ function normalizeStringList(value, fallback) {
   return cleaned.length > 0 ? Array.from(new Set(cleaned)) : [...fallback];
 }
 
+function normalizeEmailList(value) {
+  const items = Array.isArray(value) ? value : String(value || '').split(/[\n,;]/);
+  const cleaned = items
+    .map((item) => String(item).trim().toLowerCase())
+    .filter((item) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(item));
+  return Array.from(new Set(cleaned)).slice(0, 25);
+}
+
 /**
  * Normalize user configuration and fill missing values with defaults.
  * @param {Object} value
@@ -33,6 +41,7 @@ export function normalizeConfig(value = {}) {
     pageDataWatchers: normalizePageDataWatchers(value.pageDataWatchers),
     pageDataPollMs: Number.isFinite(pageDataPollMs) ? clamp(pageDataPollMs, 250, 10000) : DEFAULT_CONFIG.pageDataPollMs,
     pageDataDurationSeconds: Number.isFinite(pageDataDurationSeconds) ? clamp(pageDataDurationSeconds, 1, 120) : DEFAULT_CONFIG.pageDataDurationSeconds,
+    reportRecipients: normalizeEmailList(value.reportRecipients),
     maxEvents: Number.isFinite(maxEvents) && maxEvents > 0 ? Math.min(maxEvents, 100000) : DEFAULT_CONFIG.maxEvents,
     retentionHours: Number.isFinite(retentionHours) && retentionHours > 0 ? Math.min(retentionHours, 720) : DEFAULT_CONFIG.retentionHours,
   };
@@ -75,6 +84,7 @@ export function getConfig() {
     pageDataWatchers: activeConfig.pageDataWatchers.map((watcher) => ({ ...watcher })),
     pageDataPollMs: activeConfig.pageDataPollMs,
     pageDataDurationSeconds: activeConfig.pageDataDurationSeconds,
+    reportRecipients: [...activeConfig.reportRecipients],
     maxEvents: activeConfig.maxEvents,
     retentionHours: activeConfig.retentionHours,
   };

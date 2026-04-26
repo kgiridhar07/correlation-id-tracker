@@ -6,6 +6,7 @@ const form = document.getElementById('optionsForm');
 const urlFilters = document.getElementById('urlFilters');
 const correlationHeaders = document.getElementById('correlationHeaders');
 const pageDataWatchers = document.getElementById('pageDataWatchers');
+const reportRecipients = document.getElementById('reportRecipients');
 const maxEvents = document.getElementById('maxEvents');
 const retentionHours = document.getElementById('retentionHours');
 const pageDataPollMs = document.getElementById('pageDataPollMs');
@@ -55,6 +56,7 @@ function readForm() {
     pageDataWatchers: pageDataWatchers.value.split('\n'),
     pageDataPollMs: pageDataPollMs.value,
     pageDataDurationSeconds: pageDataDurationSeconds.value,
+    reportRecipients: reportRecipients.value.split('\n'),
     maxEvents: maxEvents.value,
     retentionHours: retentionHours.value,
   };
@@ -64,6 +66,7 @@ function fillForm(config) {
   urlFilters.value = config.urlFilters.join('\n');
   correlationHeaders.value = config.correlationHeaders.join('\n');
   pageDataWatchers.value = formatWatcherLines(config.pageDataWatchers || []);
+  reportRecipients.value = (config.reportRecipients || []).join('\n');
   pageDataPollMs.value = config.pageDataPollMs;
   pageDataDurationSeconds.value = config.pageDataDurationSeconds;
   maxEvents.value = config.maxEvents;

@@ -3,6 +3,7 @@ import { normalizeConfig } from '../utils/configManager.js';
 import { buildDuplicateCounts, collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
 import { isRelevantUrl } from '../utils/helpers.js';
 import { normalizePageDataWatchers, parseDataPath, serializePageValue } from '../utils/pageDataUtils.js';
+import { buildInvestigationReport } from '../utils/reportUtils.js';
 
 const results = document.getElementById('results');
 const summary = document.getElementById('summary');
@@ -30,6 +31,7 @@ test('normalizes config and clamps storage limits', () => {
     pageDataWatchers: 'Cart ID | digitalData.cart.cartId',
     pageDataPollMs: '50',
     pageDataDurationSeconds: '999',
+    reportRecipients: 'SRE-Team@Example.com\nnot-email\nmanager@example.com',
     maxEvents: '250000',
     retentionHours: '900',
   });
@@ -38,6 +40,7 @@ test('normalizes config and clamps storage limits', () => {
   assertDeepEqual(config.pageDataWatchers, [{ label: 'Cart ID', path: 'digitalData.cart.cartId' }]);
   assertEqual(config.pageDataPollMs, 250);
   assertEqual(config.pageDataDurationSeconds, 120);
+  assertDeepEqual(config.reportRecipients, ['sre-team@example.com', 'manager@example.com']);
   assertEqual(config.maxEvents, 100000);
   assertEqual(config.retentionHours, 720);
 });
@@ -100,6 +103,21 @@ test('summarizes dashboard metrics and top lists', () => {
   assertEqual(summary.topMethods[0].label, 'GET');
   assertEqual(summary.topDuplicateIds[0].label, 'same');
   assertEqual(summary.recentActivity.reduce((sum, bucket) => sum + bucket.count, 0), 4);
+});
+
+test('builds a bounded investigation report', () => {
+  const now = 1000000;
+  const events = [
+    { correlationId: 'cart-123', timestamp: now - 60000, sourceType: 'page-data', fieldLabel: 'Cart ID', fieldPath: 'digitalData.cart.cartId', method: 'PAGE', url: 'https://shop.example.com/cart' },
+    { correlationId: 'same', timestamp: now - 120000, sourceType: 'response-header', method: 'GET', url: 'https://api.example.com/orders' },
+    { correlationId: 'same', timestamp: now - 180000, sourceType: 'request-header', method: 'GET', url: 'https://api.example.com/orders' },
+  ];
+  const report = buildInvestigationReport(events, { now, scopeLabel: 'Last 15 minutes' });
+  assertEqual(report.subject.includes('api.example.com') || report.subject.includes('shop.example.com'), true);
+  assertEqual(report.body.includes('Correlation Tracker Report'), true);
+  assertEqual(report.body.includes('Cart ID: cart-123'), true);
+  assertEqual(report.body.includes('Recent Event Sample (3 of 3)'), true);
+  assertEqual(report.truncatedBody.length <= report.body.length, true);
 });
 
 function test(name, fn) {

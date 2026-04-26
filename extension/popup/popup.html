@@ -13,6 +13,7 @@
       <button id="btnRefresh" title="Refresh">&#x21bb;</button>
       <button id="btnOptions" title="Open options">&#9881;</button>
       <button id="btnClear" title="Clear all logs">&#x1f5d1;</button>
+      <button id="btnGenerateReport" title="Generate report">Report</button>
       <button id="btnExportJson" title="Export JSON">JSON</button>
       <button id="btnExportCsv" title="Export CSV">CSV</button>
     </div>
@@ -101,6 +102,21 @@
       </select>
       <label class="toggle"><input type="checkbox" id="duplicateOnly"> Duplicates</label>
       <label class="toggle"><input type="checkbox" id="collapseDuplicates"> Collapse</label>
+    </section>
+
+    <section id="reportPanel" class="report-panel" hidden>
+      <div class="report-header">
+        <div>
+          <h2>Generated report</h2>
+          <p id="reportMeta">Uses the current popup filters.</p>
+        </div>
+        <div class="report-actions">
+          <button id="btnCopyReport">Copy Report</button>
+          <button id="btnEmailReport">Send Email Draft</button>
+          <button id="btnCloseReport" title="Close report">Close</button>
+        </div>
+      </div>
+      <textarea id="reportPreview" rows="12" readonly spellcheck="false"></textarea>
     </section>
 
     <div class="table-wrap">

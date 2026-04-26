@@ -6,6 +6,7 @@ import { MSG, UI } from '../utils/constants.js';
 import { getExtensionApi, sendRuntimeMessage } from '../utils/browserApi.js';
 import { collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
 import { debounce, formatTimestamp, getEventKey, getHostname } from '../utils/helpers.js';
+import { buildInvestigationReport } from '../utils/reportUtils.js';
 import { initRenderer, renderEvents, prependEvent } from './tableRenderer.js';
 
 const searchInput = document.getElementById('searchInput');
@@ -18,13 +19,20 @@ const collapseDuplicates = document.getElementById('collapseDuplicates');
 const btnRefresh = document.getElementById('btnRefresh');
 const btnOptions = document.getElementById('btnOptions');
 const btnClear = document.getElementById('btnClear');
+const btnGenerateReport = document.getElementById('btnGenerateReport');
 const btnExportJson = document.getElementById('btnExportJson');
 const btnExportCsv = document.getElementById('btnExportCsv');
+const btnCopyReport = document.getElementById('btnCopyReport');
+const btnEmailReport = document.getElementById('btnEmailReport');
+const btnCloseReport = document.getElementById('btnCloseReport');
 const btnCopyLatestId = document.getElementById('btnCopyLatestId');
 const btnCopyLatestNote = document.getElementById('btnCopyLatestNote');
 const latestPanel = document.getElementById('latestPanel');
 const latestId = document.getElementById('latestId');
 const latestMeta = document.getElementById('latestMeta');
+const reportPanel = document.getElementById('reportPanel');
+const reportPreview = document.getElementById('reportPreview');
+const reportMeta = document.getElementById('reportMeta');
 const eventsBody = document.getElementById('eventsBody');
 const emptyState = document.getElementById('emptyState');
 const statusText = document.getElementById('statusText');
@@ -45,6 +53,7 @@ let visibleEvents = [];
 let latestEvent = null;
 let latestStats = null;
 let eventMap = new Map();
+let currentReport = null;
 
 async function loadEvents() {
   setStatus('Loading...');
@@ -257,6 +266,58 @@ function buildExportMetadata(events) {
   };
 }
 
+async function generateReport() {
+  const report = buildInvestigationReport(visibleEvents, { scopeLabel: buildScopeLabel() });
+  currentReport = report;
+  reportPreview.value = report.body;
+  reportMeta.textContent = `${visibleEvents.length} filtered events summarized. Full raw data stays in JSON/CSV export.`;
+  reportPanel.hidden = false;
+  setStatus('Report generated');
+}
+
+async function copyReport() {
+  if (!currentReport) await generateReport();
+  await navigator.clipboard.writeText(currentReport.body);
+  setStatus('Report copied');
+}
+
+async function emailReport() {
+  if (!currentReport) await generateReport();
+  const config = await getConfig();
+  const recipients = (config.reportRecipients || []).join(',');
+  if (!recipients) {
+    setStatus('Add report recipients in options');
+    openOptions();
+    return;
+  }
+
+  const subject = encodeURIComponent(currentReport.subject);
+  const body = encodeURIComponent(currentReport.truncatedBody);
+  window.open(`mailto:${encodeURIComponent(recipients)}?subject=${subject}&body=${body}`, '_blank');
+  setStatus('Email draft opened');
+}
+
+function closeReport() {
+  reportPanel.hidden = true;
+}
+
+async function getConfig() {
+  const response = await sendMessage({ type: MSG.GET_CONFIG });
+  return response && response.success ? response.data : {};
+}
+
+function buildScopeLabel() {
+  const parts = [];
+  if (searchInput.value.trim()) parts.push(`Search: ${searchInput.value.trim()}`);
+  if (sourceFilter.value !== 'all') parts.push(`Source: ${sourceFilter.value}`);
+  if (methodFilter.value !== 'all') parts.push(`Method: ${methodFilter.value}`);
+  if (domainFilter.value !== 'all') parts.push(`Domain: ${domainFilter.value}`);
+  if (timeFilter.value !== 'all') parts.push(`Last ${timeFilter.value} minutes`);
+  if (duplicateOnly.checked) parts.push('Duplicates only');
+  if (collapseDuplicates.checked) parts.push('Collapsed duplicates');
+  return parts.length ? parts.join(', ') : 'All captured events';
+}
+
 async function clearEvents() {
   if (!confirm('Clear all captured events?')) return;
   const response = await sendMessage({ type: MSG.CLEAR_EVENTS });
@@ -399,6 +460,10 @@ function attachListeners() {
   btnRefresh.addEventListener('click', loadEvents);
   btnOptions.addEventListener('click', openOptions);
   btnClear.addEventListener('click', clearEvents);
+  btnGenerateReport.addEventListener('click', generateReport);
+  btnCopyReport.addEventListener('click', copyReport);
+  btnEmailReport.addEventListener('click', emailReport);
+  btnCloseReport.addEventListener('click', closeReport);
   btnExportJson.addEventListener('click', exportJson);
   btnExportCsv.addEventListener('click', exportCsv);
   btnCopyLatestId.addEventListener('click', () => latestEvent && copyEvent(latestEvent, 'id'));

@@ -52,6 +52,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   pageDataWatchers: [],
   pageDataPollMs: 1000,
   pageDataDurationSeconds: 30,
+  reportRecipients: [],
   maxEvents: STORAGE_LIMITS.MAX_EVENTS,
   retentionHours: 24,
 });

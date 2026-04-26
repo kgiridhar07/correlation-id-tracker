@@ -21,6 +21,7 @@ Built for performance engineers, SREs, and debugging workflows.
 - **Interactive dashboard** — total events, unique IDs, duplicate rate, active domains, request/response split, top lists, and last-hour activity
 - **Live popup UI** — latest-ID quick view plus search, source, method, domain, time, and duplicate filters
 - **Copy formats** — copy ID, investigation note, or JSON for each event
+- **Manual reports** — generate a clean investigation summary, copy it, or open a prefilled email draft
 - **Export** — JSON and CSV export with metadata such as browser, export time, counts, and active filters
 - **Dark theme** — lightweight, VSCode-inspired dark UI
 
@@ -108,9 +109,10 @@ Firefox support uses the shared WebExtension API wrapper in `utils/browserApi.js
 4. **Use latest ID** — copy the newest ID or a ready-to-paste investigation note from the top panel.
 5. **Filter** — narrow by search text, source, method, domain, time range, or duplicate status.
 6. **Copy** — copy an event as ID, note, or JSON from the Actions column.
-7. **Export** — click "JSON" or "CSV" to download all captured events with metadata.
-8. **Configure** — click the gear button to edit URL filters, headers, page-data watchers, retention, and max saved events.
-9. **Clear** — click the trash icon to wipe stored events and reset the badge.
+7. **Report** — click "Report" to generate a bounded summary from the current popup filters, then copy it or open an email draft.
+8. **Export** — click "JSON" or "CSV" to download all captured events with metadata.
+9. **Configure** — click the gear button to edit URL filters, headers, page-data watchers, report recipients, retention, and max saved events.
+10. **Clear** — click the trash icon to wipe stored events and reset the badge.
 
 ---
 
@@ -125,6 +127,7 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 | `pageDataWatchers` | `[]` | Page global paths to capture |
 | `pageDataPollMs` | `1,000` | Page-data polling interval |
 | `pageDataDurationSeconds` | `30` | How long to poll after page load |
+| `reportRecipients` | `[]` | Email recipients used by Send Email Draft |
 | `maxEvents` | `10,000` | Max events in IndexedDB |
 | `retentionHours` | `24` | Event retention window |
 | `STORAGE_LIMITS.BATCH_INTERVAL_MS` | `2,000 ms` | Batch write interval |
@@ -149,6 +152,19 @@ Display Label | global.path.to.value
 ```
 
 The extension injects a small page-context bridge because browser content scripts cannot directly read page JavaScript variables. It only reads configured paths on matching URLs and stores the resulting value locally as a `page-data` event.
+
+### Reports And Email Drafts
+
+The popup report workflow is intentionally manual and reviewable:
+
+1. Filter the popup to the time range, source, domain, or search term you care about.
+2. Click **Report**.
+3. Review the generated summary.
+4. Click **Copy Report** for chat/ticket workflows or **Send Email Draft** to open a prefilled email.
+
+Reports summarize large captures instead of dumping every row. They include totals, request/response/page-data counts, top domains, top methods, repeated values, recent page-data values, and a latest-event sample. Use JSON/CSV export when the recipient needs the full raw dataset.
+
+Email sending uses `mailto:` and opens a draft in the user's configured email client. The extension does not store email passwords, API keys, SMTP credentials, or email provider secrets.
 
 ---
 
@@ -182,7 +198,7 @@ The extension injects a small page-context bridge because browser content script
 
 ### Unit Tests
 
-Open `extension/tests/test-runner.html` as an extension page after loading the unpacked extension. It covers header extraction, URL filtering, config normalization, page-data watcher parsing, duplicate handling, duplicate collapse, dashboard summaries, and CSV escaping.
+Open `extension/tests/test-runner.html` as an extension page after loading the unpacked extension. It covers header extraction, URL filtering, config normalization, page-data watcher parsing, duplicate handling, duplicate collapse, dashboard summaries, report generation, and CSV escaping.
 
 ### Simulated Traffic
 
@@ -222,6 +238,7 @@ fetch('https://example.com/api/test', {
 - No data leaves the browser — all storage is local IndexedDB
 - Options are stored locally with extension storage
 - Exports are user-initiated downloads only
+- Email reports open a user-reviewed draft; the extension does not send email silently
 
 ---
 
