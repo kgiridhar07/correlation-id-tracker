@@ -82,7 +82,7 @@ function createRow(evt) {
     { text: evt.method || '-', cls: 'cell-method' },
     { text: getHostname(evt.url) || '-', cls: 'cell-domain', title: getHostname(evt.url) },
     { text: truncateUrl(evt.url), cls: 'cell-url', title: evt.url },
-    { text: evt.correlationId, cls: 'cell-corr-id', title: evt.correlationId },
+    { text: evt.correlationId, cls: 'cell-corr-id', title: getValueTitle(evt) },
     { text: String(evt.duplicateCount || 1), cls: 'cell-count' },
     { text: evt.sourceType, cls: 'cell-source' },
   ];
@@ -102,6 +102,13 @@ function createRow(evt) {
   tdActions.appendChild(createCopyButton('JSON', 'json', evt));
   tr.appendChild(tdActions);
   return tr;
+}
+
+function getValueTitle(evt) {
+  const details = [evt.correlationId];
+  if (evt.fieldLabel) details.push(`Field: ${evt.fieldLabel}`);
+  if (evt.fieldPath) details.push(`Path: ${evt.fieldPath}`);
+  return details.join('\n');
 }
 
 function createCopyButton(label, format, evt) {

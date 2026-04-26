@@ -10,7 +10,8 @@ Built for performance engineers, SREs, and debugging workflows.
 
 - **Real-time capture** — intercepts HTTP headers via the WebExtensions `webRequest` API (no DevTools scraping)
 - **Header-only extraction** — scans request and response headers for correlation IDs
-- **Configurable filters** — options page controls URL filters, header names, retention, and max saved events
+- **Configurable filters** — options page controls URL filters, header names, page-data watchers, retention, and max saved events
+- **Page-data watchers** — captures configured page globals such as `digitalData.cart.cartId` or `dataLayer[0].event`
 - **IndexedDB persistence** — events survive browser restarts
 - **Batched writes** — queues events and flushes periodically to reduce I/O
 - **Automatic cleanup** — retention-based eviction (24h default) with scheduled cleanup
@@ -37,6 +38,9 @@ extension/
 │   ├── storageManager.js      # IndexedDB with batch writes
 │   ├── cleanupManager.js      # Retention cleanup scheduler
 │   └── messageBus.js          # Background ↔ popup messaging
+├── content/
+│   ├── pageDataContent.js     # Config-driven page-data polling
+│   └── pageDataBridge.js      # Injected page-context reader
 ├── popup/
 │   ├── popup.html             # Popup markup
 │   ├── popup.js               # Popup controller
@@ -46,6 +50,7 @@ extension/
 │   ├── constants.js           # All config constants
 │   ├── logger.js              # Level-gated logger
 │   ├── validators.js          # Input validation
+│   ├── pageDataUtils.js       # Page-data watcher parsing
 │   └── helpers.js             # URL filtering, debounce, formatting
 ├── options/                   # User-editable capture settings
 ├── tests/                     # Browser-based unit test runner
@@ -104,7 +109,7 @@ Firefox support uses the shared WebExtension API wrapper in `utils/browserApi.js
 5. **Filter** — narrow by search text, source, method, domain, time range, or duplicate status.
 6. **Copy** — copy an event as ID, note, or JSON from the Actions column.
 7. **Export** — click "JSON" or "CSV" to download all captured events with metadata.
-8. **Configure** — click the gear button to edit URL filters, headers, retention, and max saved events.
+8. **Configure** — click the gear button to edit URL filters, headers, page-data watchers, retention, and max saved events.
 9. **Clear** — click the trash icon to wipe stored events and reset the badge.
 
 ---
@@ -117,11 +122,33 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 |---------|---------|-------------|
 | `urlFilters` | `['orderup', 'usom', '/api/']` | URL substrings to match |
 | `correlationHeaders` | `['x-correlation-id', ...]` | Header names to extract |
+| `pageDataWatchers` | `[]` | Page global paths to capture |
+| `pageDataPollMs` | `1,000` | Page-data polling interval |
+| `pageDataDurationSeconds` | `30` | How long to poll after page load |
 | `maxEvents` | `10,000` | Max events in IndexedDB |
 | `retentionHours` | `24` | Event retention window |
 | `STORAGE_LIMITS.BATCH_INTERVAL_MS` | `2,000 ms` | Batch write interval |
 | `STORAGE_LIMITS.BATCH_MAX_SIZE` | `50` | Force flush threshold |
 | `RING_BUFFER.MAX_PENDING` | `5,000` | Max pending request map entries |
+
+### Page Data Watchers
+
+Page-data watchers capture values from page-level JavaScript globals. They use the same URL filters as network capture, so add the site or API domain first, then add one watcher per line:
+
+```text
+Cart ID | digitalData.cart.cartId
+Cart ID Legacy | digitalData.cartId
+DataLayer Event | dataLayer[0].event
+Adobe Cart | adobeDataLayer[0].cart.id
+```
+
+The format is:
+
+```text
+Display Label | global.path.to.value
+```
+
+The extension injects a small page-context bridge because browser content scripts cannot directly read page JavaScript variables. It only reads configured paths on matching URLs and stores the resulting value locally as a `page-data` event.
 
 ---
 
@@ -135,6 +162,9 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
   "method": "POST",
   "correlationId": "abc-123-def-456",
   "sourceType": "response-header",
+  "fieldLabel": "Cart ID",
+  "fieldPath": "digitalData.cart.cartId",
+  "valueType": "string",
   "tabId": 42
 }
 ```
@@ -152,7 +182,7 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 
 ### Unit Tests
 
-Open `extension/tests/test-runner.html` as an extension page after loading the unpacked extension. It covers header extraction, URL filtering, config normalization, duplicate handling, duplicate collapse, and CSV escaping.
+Open `extension/tests/test-runner.html` as an extension page after loading the unpacked extension. It covers header extraction, URL filtering, config normalization, page-data watcher parsing, duplicate handling, duplicate collapse, dashboard summaries, and CSV escaping.
 
 ### Simulated Traffic
 
@@ -188,6 +218,7 @@ fetch('https://example.com/api/test', {
 - Does **not** capture response bodies
 - Does **not** intentionally store auth tokens, cookies, or PII
 - Captures only configured header names
+- Captures only configured page-data paths on matching URLs
 - No data leaves the browser — all storage is local IndexedDB
 - Options are stored locally with extension storage
 - Exports are user-initiated downloads only

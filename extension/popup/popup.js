@@ -96,7 +96,7 @@ function updateDashboard(events) {
   metricUnique.textContent = formatNumber(summary.uniqueIds);
   metricDuplicates.textContent = `${summary.duplicateRate}%`;
   metricDomains.textContent = formatNumber(summary.activeDomains);
-  metricSources.textContent = `${formatNumber(summary.requestCount)} / ${formatNumber(summary.responseCount)}`;
+  metricSources.textContent = `${formatNumber(summary.requestCount)} / ${formatNumber(summary.responseCount)} / ${formatNumber(summary.pageDataCount)}`;
   insightText.textContent = summary.insight;
   renderRankList(topDomainsList, summary.topDomains);
   renderRankList(topMethodsList, summary.topMethods);
@@ -168,6 +168,8 @@ function applyFilters(events) {
       event.url.toLowerCase().includes(query) ||
       (event.method || '').toLowerCase().includes(query) ||
       (event.sourceType || '').toLowerCase().includes(query) ||
+      (event.fieldLabel || '').toLowerCase().includes(query) ||
+      (event.fieldPath || '').toLowerCase().includes(query) ||
       hostname.toLowerCase().includes(query);
     return matchesQuery &&
       (source === 'all' || event.sourceType === source) &&
@@ -211,7 +213,7 @@ async function exportCsv() {
   if (!response || !response.success) { setStatus('Export failed'); return; }
 
   const metadata = buildExportMetadata(response.data);
-  const header = 'timestamp,requestId,method,domain,url,correlationId,sourceType,tabId\n';
+  const header = 'timestamp,requestId,method,domain,url,capturedValue,sourceType,fieldLabel,fieldPath,valueType,tabId\n';
   const rows = response.data.map((event) => [
     new Date(event.timestamp).toISOString(),
     event.requestId,
@@ -220,6 +222,9 @@ async function exportCsv() {
     csvEscape(event.url || ''),
     event.correlationId,
     event.sourceType,
+    csvEscape(event.fieldLabel || ''),
+    csvEscape(event.fieldPath || ''),
+    event.valueType || '',
     event.tabId,
   ].join(','));
   const preface = [
@@ -253,7 +258,7 @@ function buildExportMetadata(events) {
 }
 
 async function clearEvents() {
-  if (!confirm('Clear all captured correlation events?')) return;
+  if (!confirm('Clear all captured events?')) return;
   const response = await sendMessage({ type: MSG.CLEAR_EVENTS });
   if (response && response.success) {
     allEvents = [];
@@ -286,12 +291,14 @@ function formatCopyValue(event, format) {
   }
   if (format === 'note') {
     return [
-      `Correlation ID: ${event.correlationId}`,
+      `Captured Value: ${event.correlationId}`,
+      event.fieldLabel ? `Field: ${event.fieldLabel}` : '',
+      event.fieldPath ? `Path: ${event.fieldPath}` : '',
       `Endpoint: ${event.url}`,
       `Method: ${event.method || '-'}`,
       `Source: ${event.sourceType}`,
       `Time: ${formatTimestamp(event.timestamp)}`,
-    ].join('\n');
+    ].filter(Boolean).join('\n');
   }
   return event.correlationId;
 }
@@ -306,7 +313,8 @@ function updateLatestPanel() {
   latestPanel.hidden = !latestEvent;
   if (!latestEvent) return;
   latestId.textContent = latestEvent.correlationId;
-  latestMeta.textContent = `${latestEvent.method || '-'} ${getHostname(latestEvent.url) || latestEvent.url} - ${latestEvent.sourceType}`;
+  const label = latestEvent.fieldLabel ? `${latestEvent.fieldLabel} - ` : '';
+  latestMeta.textContent = `${label}${latestEvent.method || '-'} ${getHostname(latestEvent.url) || latestEvent.url} - ${latestEvent.sourceType}`;
 }
 
 function updateStats() {

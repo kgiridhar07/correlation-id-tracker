@@ -49,6 +49,9 @@ export const STORAGE_LIMITS = Object.freeze({
 export const DEFAULT_CONFIG = Object.freeze({
   urlFilters: URL_FILTERS,
   correlationHeaders: CORRELATION_HEADERS,
+  pageDataWatchers: [],
+  pageDataPollMs: 1000,
+  pageDataDurationSeconds: 30,
   maxEvents: STORAGE_LIMITS.MAX_EVENTS,
   retentionHours: 24,
 });
@@ -63,6 +66,7 @@ export const RING_BUFFER = Object.freeze({
 export const SOURCE_TYPES = Object.freeze({
   REQUEST_HEADER: 'request-header',
   RESPONSE_HEADER: 'response-header',
+  PAGE_DATA: 'page-data',
 });
 
 /** Message types for background ↔ popup communication */
@@ -76,6 +80,7 @@ export const MSG = Object.freeze({
   SAVE_CONFIG: 'SAVE_CONFIG',
   CONFIG_UPDATED: 'CONFIG_UPDATED',
   GET_STATS: 'GET_STATS',
+  CAPTURE_PAGE_DATA: 'CAPTURE_PAGE_DATA',
 });
 
 /** Popup UI defaults */

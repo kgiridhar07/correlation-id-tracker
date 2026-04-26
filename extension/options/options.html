@@ -26,6 +26,12 @@
         <p>One header name per line. Matching is case-insensitive.</p>
       </section>
 
+      <section class="panel">
+        <label for="pageDataWatchers">Page data watchers</label>
+        <textarea id="pageDataWatchers" rows="7" spellcheck="false" placeholder="Cart ID | digitalData.cart.cartId"></textarea>
+        <p>One watcher per line: label, pipe, then global path. Examples: Cart ID | digitalData.cart.cartId or Event | dataLayer[0].event.</p>
+      </section>
+
       <section class="grid-panel">
         <div class="field">
           <label for="maxEvents">Maximum saved events</label>
@@ -34,6 +40,14 @@
         <div class="field">
           <label for="retentionHours">Retention window, hours</label>
           <input id="retentionHours" type="number" min="1" max="720" step="1">
+        </div>
+        <div class="field">
+          <label for="pageDataPollMs">Page data poll interval, ms</label>
+          <input id="pageDataPollMs" type="number" min="250" max="10000" step="250">
+        </div>
+        <div class="field">
+          <label for="pageDataDurationSeconds">Page data capture window, seconds</label>
+          <input id="pageDataDurationSeconds" type="number" min="1" max="120" step="1">
         </div>
       </section>
 

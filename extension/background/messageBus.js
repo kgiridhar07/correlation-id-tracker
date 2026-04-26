@@ -3,11 +3,11 @@
  * Centralises all runtime message handling in the background service worker.
  */
 
-import { MSG } from '../utils/constants.js';
+import { MSG, SOURCE_TYPES } from '../utils/constants.js';
 import { addRuntimeMessageListener, sendRuntimeMessage } from '../utils/browserApi.js';
 import { loadConfig, saveConfig } from '../utils/configManager.js';
-import { getEvents, getAllEvents, getStats, clearAllEvents, trimToMaxEvents } from './storageManager.js';
-import { clearBadge } from './badgeManager.js';
+import { getEvents, getAllEvents, getStats, clearAllEvents, trimToMaxEvents, queueEvent } from './storageManager.js';
+import { clearBadge, incrementBadge } from './badgeManager.js';
 import * as log from '../utils/logger.js';
 
 /**
@@ -40,6 +40,9 @@ async function handleMessage(message) {
 
     case MSG.GET_STATS:
       return handleGetStats();
+
+    case MSG.CAPTURE_PAGE_DATA:
+      return handleCapturePageData(message);
 
     default:
       return undefined;
@@ -105,6 +108,35 @@ async function handleGetStats() {
     return { success: true, data: stats };
   } catch (err) {
     log.error('GET_STATS failed', err);
+    return { success: false, error: err.message };
+  }
+}
+
+async function handleCapturePageData(message) {
+  try {
+    const payload = message.data || {};
+    const value = String(payload.value || '').trim();
+    if (!value) return { success: false, error: 'Missing page data value' };
+
+    const event = {
+      requestId: payload.requestId || `page-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      timestamp: Date.now(),
+      url: String(payload.url || ''),
+      method: 'PAGE',
+      correlationId: value,
+      sourceType: SOURCE_TYPES.PAGE_DATA,
+      tabId: Number.isFinite(payload.tabId) ? payload.tabId : -1,
+      fieldLabel: String(payload.label || payload.path || 'Page Data'),
+      fieldPath: String(payload.path || ''),
+      valueType: String(payload.valueType || 'string'),
+    };
+
+    queueEvent(event);
+    incrementBadge();
+    broadcastNewEvent(event);
+    return { success: true };
+  } catch (err) {
+    log.error('CAPTURE_PAGE_DATA failed', err);
     return { success: false, error: err.message };
   }
 }

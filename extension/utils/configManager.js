@@ -4,6 +4,7 @@
 
 import { CONFIG, DEFAULT_CONFIG } from './constants.js';
 import { getLocalStorage, setLocalStorage } from './browserApi.js';
+import { normalizePageDataWatchers } from './pageDataUtils.js';
 
 let activeConfig = { ...DEFAULT_CONFIG };
 
@@ -23,13 +24,22 @@ function normalizeStringList(value, fallback) {
 export function normalizeConfig(value = {}) {
   const maxEvents = Number.parseInt(value.maxEvents, 10);
   const retentionHours = Number.parseFloat(value.retentionHours);
+  const pageDataPollMs = Number.parseInt(value.pageDataPollMs, 10);
+  const pageDataDurationSeconds = Number.parseInt(value.pageDataDurationSeconds, 10);
 
   return {
     urlFilters: normalizeStringList(value.urlFilters, DEFAULT_CONFIG.urlFilters),
     correlationHeaders: normalizeStringList(value.correlationHeaders, DEFAULT_CONFIG.correlationHeaders),
+    pageDataWatchers: normalizePageDataWatchers(value.pageDataWatchers),
+    pageDataPollMs: Number.isFinite(pageDataPollMs) ? clamp(pageDataPollMs, 250, 10000) : DEFAULT_CONFIG.pageDataPollMs,
+    pageDataDurationSeconds: Number.isFinite(pageDataDurationSeconds) ? clamp(pageDataDurationSeconds, 1, 120) : DEFAULT_CONFIG.pageDataDurationSeconds,
     maxEvents: Number.isFinite(maxEvents) && maxEvents > 0 ? Math.min(maxEvents, 100000) : DEFAULT_CONFIG.maxEvents,
     retentionHours: Number.isFinite(retentionHours) && retentionHours > 0 ? Math.min(retentionHours, 720) : DEFAULT_CONFIG.retentionHours,
   };
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
 }
 
 /**
@@ -62,6 +72,9 @@ export function getConfig() {
   return {
     urlFilters: [...activeConfig.urlFilters],
     correlationHeaders: [...activeConfig.correlationHeaders],
+    pageDataWatchers: activeConfig.pageDataWatchers.map((watcher) => ({ ...watcher })),
+    pageDataPollMs: activeConfig.pageDataPollMs,
+    pageDataDurationSeconds: activeConfig.pageDataDurationSeconds,
     maxEvents: activeConfig.maxEvents,
     retentionHours: activeConfig.retentionHours,
   };

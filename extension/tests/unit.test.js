@@ -2,6 +2,7 @@ import { extractCorrelationIds } from '../background/correlationExtractor.js';
 import { normalizeConfig } from '../utils/configManager.js';
 import { buildDuplicateCounts, collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
 import { isRelevantUrl } from '../utils/helpers.js';
+import { normalizePageDataWatchers, parseDataPath, serializePageValue } from '../utils/pageDataUtils.js';
 
 const results = document.getElementById('results');
 const summary = document.getElementById('summary');
@@ -26,13 +27,30 @@ test('normalizes config and clamps storage limits', () => {
   const config = normalizeConfig({
     urlFilters: ['API', '', 'api'],
     correlationHeaders: 'X-Trace-ID\n\nRequest-ID',
+    pageDataWatchers: 'Cart ID | digitalData.cart.cartId',
+    pageDataPollMs: '50',
+    pageDataDurationSeconds: '999',
     maxEvents: '250000',
     retentionHours: '900',
   });
   assertDeepEqual(config.urlFilters, ['api']);
   assertDeepEqual(config.correlationHeaders, ['x-trace-id', 'request-id']);
+  assertDeepEqual(config.pageDataWatchers, [{ label: 'Cart ID', path: 'digitalData.cart.cartId' }]);
+  assertEqual(config.pageDataPollMs, 250);
+  assertEqual(config.pageDataDurationSeconds, 120);
   assertEqual(config.maxEvents, 100000);
   assertEqual(config.retentionHours, 720);
+});
+
+test('parses configurable page data watcher paths', () => {
+  const watchers = normalizePageDataWatchers([
+    'Cart ID | digitalData.cart.cartId',
+    'Event | dataLayer[0].event',
+    'Bad | dataLayer[]',
+  ]);
+  assertEqual(watchers.length, 2);
+  assertDeepEqual(parseDataPath('dataLayer[0].event'), ['dataLayer', '0', 'event']);
+  assertEqual(serializePageValue({ id: 'cart-123' }).value, '{"id":"cart-123"}');
 });
 
 test('counts and enriches duplicate IDs', () => {
@@ -69,17 +87,19 @@ test('summarizes dashboard metrics and top lists', () => {
     { correlationId: 'same', timestamp: now - 60000, sourceType: 'request-header', method: 'GET', url: 'https://api.example.com/orders' },
     { correlationId: 'same', timestamp: now - 120000, sourceType: 'response-header', method: 'GET', url: 'https://api.example.com/orders' },
     { correlationId: 'other', timestamp: now - 3000000, sourceType: 'response-header', method: 'POST', url: 'https://shop.example.com/api' },
+    { correlationId: 'cart-123', timestamp: now - 180000, sourceType: 'page-data', method: 'PAGE', url: 'https://shop.example.com/cart' },
   ];
   const summary = summarizeEvents(events, now);
-  assertEqual(summary.totalEvents, 3);
-  assertEqual(summary.uniqueIds, 2);
-  assertEqual(summary.duplicateRate, 33);
+  assertEqual(summary.totalEvents, 4);
+  assertEqual(summary.uniqueIds, 3);
+  assertEqual(summary.duplicateRate, 25);
   assertEqual(summary.requestCount, 1);
   assertEqual(summary.responseCount, 2);
+  assertEqual(summary.pageDataCount, 1);
   assertEqual(summary.topDomains[0].label, 'api.example.com');
   assertEqual(summary.topMethods[0].label, 'GET');
   assertEqual(summary.topDuplicateIds[0].label, 'same');
-  assertEqual(summary.recentActivity.reduce((sum, bucket) => sum + bucket.count, 0), 3);
+  assertEqual(summary.recentActivity.reduce((sum, bucket) => sum + bucket.count, 0), 4);
 });
 
 function test(name, fn) {

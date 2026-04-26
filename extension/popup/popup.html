@@ -21,7 +21,7 @@
   <main>
     <section id="latestPanel" class="latest-panel" hidden>
       <div>
-        <span class="latest-label">Latest correlation ID</span>
+        <span class="latest-label">Latest captured value</span>
         <strong id="latestId"></strong>
         <span id="latestMeta"></span>
       </div>
@@ -50,7 +50,7 @@
           <strong id="metricDomains">0</strong>
         </div>
         <div class="metric-card wide">
-          <span>Request / Response</span>
+          <span>Request / Response / Page</span>
           <strong id="metricSources">0 / 0</strong>
         </div>
       </div>
@@ -85,6 +85,7 @@
         <option value="all">All sources</option>
         <option value="request-header">Request</option>
         <option value="response-header">Response</option>
+        <option value="page-data">Page data</option>
       </select>
       <select id="methodFilter" title="Method">
         <option value="all">All methods</option>
@@ -110,7 +111,7 @@
             <th>Method</th>
             <th>Domain</th>
             <th>URL</th>
-            <th>Correlation ID</th>
+            <th>Captured Value</th>
             <th>Count</th>
             <th>Source</th>
             <th>Actions</th>

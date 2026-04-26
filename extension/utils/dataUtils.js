@@ -75,6 +75,7 @@ export function summarizeEvents(events, now = Date.now()) {
     duplicateRate: events.length ? Math.round(((events.length - uniqueIds) / events.length) * 100) : 0,
     requestCount: sourceCounts.get('request-header') || 0,
     responseCount: sourceCounts.get('response-header') || 0,
+    pageDataCount: sourceCounts.get('page-data') || 0,
     activeDomains: domainCounts.size,
     latestEvent: events[0] || null,
     latestAgeMinutes: events[0] ? Math.max(0, Math.floor((now - events[0].timestamp) / 60000)) : null,
