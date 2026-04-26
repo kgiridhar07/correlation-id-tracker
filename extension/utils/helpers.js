@@ -2,7 +2,7 @@
  * @fileoverview General-purpose helper functions.
  */
 
-import { URL_FILTERS } from './constants.js';
+import { getConfig } from './configManager.js';
 
 /**
  * Test whether a URL matches any of the configured filter patterns.
@@ -13,10 +13,33 @@ import { URL_FILTERS } from './constants.js';
 export function isRelevantUrl(url) {
   if (!url) return false;
   const lower = url.toLowerCase();
-  for (let i = 0; i < URL_FILTERS.length; i++) {
-    if (lower.includes(URL_FILTERS[i])) return true;
+  const filters = getConfig().urlFilters;
+  for (let i = 0; i < filters.length; i++) {
+    if (lower.includes(filters[i])) return true;
   }
   return false;
+}
+
+/**
+ * Safely extract a hostname for display and filtering.
+ * @param {string} url
+ * @returns {string}
+ */
+export function getHostname(url) {
+  try {
+    return new URL(url).hostname;
+  } catch (_err) {
+    return '';
+  }
+}
+
+/**
+ * Stable event key used by popup rendering and copy actions.
+ * @param {Object} event
+ * @returns {string}
+ */
+export function getEventKey(event) {
+  return [event.timestamp, event.requestId, event.correlationId, event.sourceType].join('|');
 }
 
 /**

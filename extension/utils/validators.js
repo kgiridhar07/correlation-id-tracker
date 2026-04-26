@@ -30,7 +30,7 @@ export function isValidCorrelationEvent(event) {
 }
 
 /**
- * Validate a chrome.webRequest header array entry.
+ * Validate a webRequest header array entry.
  * @param {{ name: string, value?: string }} header
  * @returns {boolean}
  */

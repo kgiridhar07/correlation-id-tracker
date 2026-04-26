@@ -5,7 +5,8 @@
  */
 
 import { STORAGE_LIMITS } from '../utils/constants.js';
-import { deleteEventsBefore, getEvents } from './storageManager.js';
+import { getRetentionMs } from '../utils/configManager.js';
+import { deleteEventsBefore, trimToMaxEvents } from './storageManager.js';
 import * as log from '../utils/logger.js';
 
 /** @type {number|null} */
@@ -18,8 +19,9 @@ let cleanupTimerId = null;
  */
 async function runCleanup() {
   try {
-    const cutoff = Date.now() - STORAGE_LIMITS.RETENTION_MS;
-    await deleteEventsBefore(cutoff);
+    const configuredCutoff = Date.now() - getRetentionMs();
+    await deleteEventsBefore(configuredCutoff);
+    await trimToMaxEvents();
   } catch (err) {
     log.error('Cleanup pass failed', err);
   }

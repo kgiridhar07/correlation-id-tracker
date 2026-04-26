@@ -19,6 +19,11 @@ export const URL_FILTERS = Object.freeze([
   '/api/',
 ]);
 
+/** Persisted user configuration */
+export const CONFIG = Object.freeze({
+  STORAGE_KEY: 'correlationTrackerConfig',
+});
+
 /** IndexedDB configuration */
 export const DB_CONFIG = Object.freeze({
   NAME: 'CorrelationTrackerDB',
@@ -40,6 +45,14 @@ export const STORAGE_LIMITS = Object.freeze({
   CLEANUP_INTERVAL_MS: 5 * 60 * 1000, // 5 minutes
 });
 
+/** User-editable defaults, persisted via extension storage */
+export const DEFAULT_CONFIG = Object.freeze({
+  urlFilters: URL_FILTERS,
+  correlationHeaders: CORRELATION_HEADERS,
+  maxEvents: STORAGE_LIMITS.MAX_EVENTS,
+  retentionHours: 24,
+});
+
 /** In-memory ring buffer config for the pending-request map */
 export const RING_BUFFER = Object.freeze({
   /** Max pending (unmatched) request entries before eviction */
@@ -59,6 +72,10 @@ export const MSG = Object.freeze({
   CLEAR_EVENTS: 'CLEAR_EVENTS',
   EVENTS_CLEARED: 'EVENTS_CLEARED',
   EXPORT_EVENTS: 'EXPORT_EVENTS',
+  GET_CONFIG: 'GET_CONFIG',
+  SAVE_CONFIG: 'SAVE_CONFIG',
+  CONFIG_UPDATED: 'CONFIG_UPDATED',
+  GET_STATS: 'GET_STATS',
 });
 
 /** Popup UI defaults */

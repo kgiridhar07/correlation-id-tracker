@@ -1,5 +1,5 @@
 /**
- * @fileoverview Network listener — hooks into chrome.webRequest to intercept
+ * @fileoverview Network listener — hooks into webRequest to intercept
  * relevant OrderUp/USOM traffic and extract correlation IDs from headers.
  *
  * Architecture:
@@ -9,14 +9,16 @@
  */
 
 import { SOURCE_TYPES, RING_BUFFER } from '../utils/constants.js';
+import { getExtensionApi } from '../utils/browserApi.js';
 import { isRelevantUrl } from '../utils/helpers.js';
 import { extractCorrelationIds } from './correlationExtractor.js';
 import { queueEvent } from './storageManager.js';
 import { broadcastNewEvent } from './messageBus.js';
+import { incrementBadge } from './badgeManager.js';
 import * as log from '../utils/logger.js';
 
 /**
- * Pending request map — keyed by chrome requestId.
+ * Pending request map — keyed by browser requestId.
  * Stores partial metadata from onBeforeSendHeaders until the response arrives.
  * Bounded to RING_BUFFER.MAX_PENDING entries; oldest entries evicted when full.
  * @type {Map<string, Object>}
@@ -49,12 +51,13 @@ function emitEvent({ requestId, url, method, correlationId, sourceType, tabId })
   };
 
   queueEvent(event);
+  incrementBadge();
   broadcastNewEvent(event);
   log.debug('Emitted event', event.correlationId, event.sourceType);
 }
 
 /**
- * Handler for chrome.webRequest.onBeforeSendHeaders.
+ * Handler for webRequest.onBeforeSendHeaders.
  * @param {Object} details
  */
 function onBeforeSendHeaders(details) {
@@ -84,7 +87,7 @@ function onBeforeSendHeaders(details) {
 }
 
 /**
- * Handler for chrome.webRequest.onHeadersReceived.
+ * Handler for webRequest.onHeadersReceived.
  * @param {Object} details
  */
 function onHeadersReceived(details) {
@@ -117,13 +120,17 @@ function onHeadersReceived(details) {
  * Called once during background service worker initialisation.
  */
 export function startNetworkListener() {
-  chrome.webRequest.onBeforeSendHeaders.addListener(
+  const webRequest = getExtensionApi().webRequest;
+
+  addWebRequestListener(
+    webRequest.onBeforeSendHeaders,
     onBeforeSendHeaders,
     { urls: ['<all_urls>'] },
     ['requestHeaders', 'extraHeaders']
   );
 
-  chrome.webRequest.onHeadersReceived.addListener(
+  addWebRequestListener(
+    webRequest.onHeadersReceived,
     onHeadersReceived,
     { urls: ['<all_urls>'] },
     ['responseHeaders', 'extraHeaders']
@@ -136,8 +143,19 @@ export function startNetworkListener() {
  * Deregister listeners (useful for testing / shutdown).
  */
 export function stopNetworkListener() {
-  chrome.webRequest.onBeforeSendHeaders.removeListener(onBeforeSendHeaders);
-  chrome.webRequest.onHeadersReceived.removeListener(onHeadersReceived);
+  const webRequest = getExtensionApi().webRequest;
+  webRequest.onBeforeSendHeaders.removeListener(onBeforeSendHeaders);
+  webRequest.onHeadersReceived.removeListener(onHeadersReceived);
   pendingMap.clear();
   log.info('Network listeners removed');
+}
+
+function addWebRequestListener(event, listener, filter, extraInfoSpec) {
+  try {
+    event.addListener(listener, filter, extraInfoSpec);
+  } catch (err) {
+    const fallbackSpec = extraInfoSpec.filter((item) => item !== 'extraHeaders');
+    event.addListener(listener, filter, fallbackSpec);
+    log.warn('Registered webRequest listener without extraHeaders fallback', err);
+  }
 }

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Correlation ID Tracker Options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="page-header">
+      <h1>Correlation ID Tracker</h1>
+      <p>Configure capture filters, correlation headers, and local retention.</p>
+    </header>
+
+    <form id="optionsForm" class="settings-form">
+      <section class="panel">
+        <label for="urlFilters">URL filters</label>
+        <textarea id="urlFilters" rows="6" spellcheck="false"></textarea>
+        <p>One lowercase match per line. Requests must contain at least one value.</p>
+      </section>
+
+      <section class="panel">
+        <label for="correlationHeaders">Correlation headers</label>
+        <textarea id="correlationHeaders" rows="6" spellcheck="false"></textarea>
+        <p>One header name per line. Matching is case-insensitive.</p>
+      </section>
+
+      <section class="grid-panel">
+        <div class="field">
+          <label for="maxEvents">Maximum saved events</label>
+          <input id="maxEvents" type="number" min="1" max="100000" step="100">
+        </div>
+        <div class="field">
+          <label for="retentionHours">Retention window, hours</label>
+          <input id="retentionHours" type="number" min="1" max="720" step="1">
+        </div>
+      </section>
+
+      <footer class="actions">
+        <button type="button" id="btnReset">Reset</button>
+        <button type="submit" id="btnSave">Save</button>
+        <span id="statusText" role="status">Ready</span>
+      </footer>
+    </form>
+  </main>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

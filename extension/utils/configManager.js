@@ -1,0 +1,76 @@
+/**
+ * @fileoverview Persisted configuration for filters, headers, and retention.
+ */
+
+import { CONFIG, DEFAULT_CONFIG } from './constants.js';
+import { getLocalStorage, setLocalStorage } from './browserApi.js';
+
+let activeConfig = { ...DEFAULT_CONFIG };
+
+function normalizeStringList(value, fallback) {
+  const items = Array.isArray(value) ? value : String(value || '').split('\n');
+  const cleaned = items
+    .map((item) => String(item).trim().toLowerCase())
+    .filter(Boolean);
+  return cleaned.length > 0 ? Array.from(new Set(cleaned)) : [...fallback];
+}
+
+/**
+ * Normalize user configuration and fill missing values with defaults.
+ * @param {Object} value
+ * @returns {Object}
+ */
+export function normalizeConfig(value = {}) {
+  const maxEvents = Number.parseInt(value.maxEvents, 10);
+  const retentionHours = Number.parseFloat(value.retentionHours);
+
+  return {
+    urlFilters: normalizeStringList(value.urlFilters, DEFAULT_CONFIG.urlFilters),
+    correlationHeaders: normalizeStringList(value.correlationHeaders, DEFAULT_CONFIG.correlationHeaders),
+    maxEvents: Number.isFinite(maxEvents) && maxEvents > 0 ? Math.min(maxEvents, 100000) : DEFAULT_CONFIG.maxEvents,
+    retentionHours: Number.isFinite(retentionHours) && retentionHours > 0 ? Math.min(retentionHours, 720) : DEFAULT_CONFIG.retentionHours,
+  };
+}
+
+/**
+ * Load configuration from extension storage.
+ * @returns {Promise<Object>}
+ */
+export async function loadConfig() {
+  const result = await getLocalStorage(CONFIG.STORAGE_KEY);
+  const stored = result && result[CONFIG.STORAGE_KEY];
+  activeConfig = normalizeConfig(stored);
+  return getConfig();
+}
+
+/**
+ * Save configuration to extension storage.
+ * @param {Object} nextConfig
+ * @returns {Promise<Object>}
+ */
+export async function saveConfig(nextConfig) {
+  activeConfig = normalizeConfig(nextConfig);
+  await setLocalStorage({ [CONFIG.STORAGE_KEY]: activeConfig });
+  return getConfig();
+}
+
+/**
+ * Return the active in-memory configuration.
+ * @returns {Object}
+ */
+export function getConfig() {
+  return {
+    urlFilters: [...activeConfig.urlFilters],
+    correlationHeaders: [...activeConfig.correlationHeaders],
+    maxEvents: activeConfig.maxEvents,
+    retentionHours: activeConfig.retentionHours,
+  };
+}
+
+export function getRetentionMs() {
+  return activeConfig.retentionHours * 60 * 60 * 1000;
+}
+
+export function getMaxEvents() {
+  return activeConfig.maxEvents;
+}

@@ -5,6 +5,7 @@
  */
 
 import { DB_CONFIG, STORAGE_LIMITS } from '../utils/constants.js';
+import { getMaxEvents } from '../utils/configManager.js';
 import { isValidCorrelationEvent } from '../utils/validators.js';
 import * as log from '../utils/logger.js';
 
@@ -102,6 +103,7 @@ export async function flushQueue() {
     });
 
     log.debug(`Flushed ${batch.length} events to IndexedDB`);
+    await trimToMaxEvents();
   } catch (err) {
     log.error('Batch write failed, re-queuing events', err);
     // Re-queue failed events at the front
@@ -163,10 +165,35 @@ export async function getAllEvents() {
   return new Promise((resolve, reject) => {
     const tx = database.transaction(DB_CONFIG.STORE_NAME, 'readonly');
     const store = tx.objectStore(DB_CONFIG.STORE_NAME);
-    const request = store.getAll();
-    request.onsuccess = () => resolve(request.result);
+    const index = store.index('timestamp');
+    const results = [];
+    const request = index.openCursor(null, 'prev');
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        results.push(cursor.value);
+        cursor.continue();
+      } else {
+        resolve(results);
+      }
+    };
     request.onerror = () => reject(request.error);
   });
+}
+
+/**
+ * Return aggregate storage stats for the popup.
+ * @returns {Promise<Object>}
+ */
+export async function getStats() {
+  const events = await getAllEvents();
+  const uniqueIds = new Set(events.map((event) => event.correlationId)).size;
+  return {
+    totalEvents: events.length,
+    uniqueIds,
+    maxEvents: getMaxEvents(),
+    newestTimestamp: events[0] ? events[0].timestamp : null,
+  };
 }
 
 /**
@@ -209,6 +236,40 @@ export async function deleteEventsBefore(cutoffTimestamp) {
         log.info(`Cleanup: deleted ${count} old events`);
         resolve(count);
       }
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
+/**
+ * Delete oldest records when stored events exceed configured maximum.
+ * @returns {Promise<number>}
+ */
+export async function trimToMaxEvents() {
+  const maxEvents = getMaxEvents();
+  const database = await getDb();
+  return new Promise((resolve, reject) => {
+    const tx = database.transaction(DB_CONFIG.STORE_NAME, 'readwrite');
+    const store = tx.objectStore(DB_CONFIG.STORE_NAME);
+    const index = store.index('timestamp');
+    let total = 0;
+    let deleted = 0;
+    const request = index.openCursor(null, 'prev');
+
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (!cursor) {
+        if (deleted > 0) log.info(`Cleanup: trimmed ${deleted} surplus events`);
+        resolve(deleted);
+        return;
+      }
+
+      total++;
+      if (total > maxEvents) {
+        cursor.delete();
+        deleted++;
+      }
+      cursor.continue();
     };
     request.onerror = () => reject(request.error);
   });

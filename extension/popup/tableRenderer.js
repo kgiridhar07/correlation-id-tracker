@@ -3,7 +3,7 @@
  * Builds DOM rows from CorrelationEvent data with virtual-window limiting.
  */
 
-import { formatTimestamp, truncateUrl } from '../utils/helpers.js';
+import { formatTimestamp, getEventKey, getHostname, truncateUrl } from '../utils/helpers.js';
 import { UI } from '../utils/constants.js';
 
 /** @type {HTMLTableSectionElement} */
@@ -37,51 +37,7 @@ export function renderEvents(events) {
   const fragment = document.createDocumentFragment();
 
   for (const evt of visible) {
-    const tr = document.createElement('tr');
-
-    // Timestamp
-    const tdTime = document.createElement('td');
-    tdTime.textContent = formatTimestamp(evt.timestamp);
-    tdTime.className = 'cell-time';
-    tr.appendChild(tdTime);
-
-    // Method
-    const tdMethod = document.createElement('td');
-    tdMethod.textContent = evt.method || '-';
-    tdMethod.className = 'cell-method';
-    tr.appendChild(tdMethod);
-
-    // URL (truncated, full in title)
-    const tdUrl = document.createElement('td');
-    tdUrl.textContent = truncateUrl(evt.url);
-    tdUrl.title = evt.url;
-    tdUrl.className = 'cell-url';
-    tr.appendChild(tdUrl);
-
-    // Correlation ID
-    const tdCorrId = document.createElement('td');
-    tdCorrId.textContent = evt.correlationId;
-    tdCorrId.title = evt.correlationId;
-    tdCorrId.className = 'cell-corr-id';
-    tr.appendChild(tdCorrId);
-
-    // Source type
-    const tdSource = document.createElement('td');
-    tdSource.textContent = evt.sourceType;
-    tdSource.className = 'cell-source';
-    tr.appendChild(tdSource);
-
-    // Actions — copy button
-    const tdActions = document.createElement('td');
-    tdActions.className = 'cell-actions';
-    const copyBtn = document.createElement('button');
-    copyBtn.textContent = 'Copy';
-    copyBtn.className = 'btn-copy';
-    copyBtn.dataset.corrId = evt.correlationId;
-    tdActions.appendChild(copyBtn);
-    tr.appendChild(tdActions);
-
-    fragment.appendChild(tr);
+    fragment.appendChild(createRow(evt));
   }
 
   tbody.textContent = ''; // clear efficiently
@@ -106,32 +62,7 @@ export function prependEvent(evt) {
     tbody.deleteRow(tbody.rows.length - 1);
   }
 
-  const tr = document.createElement('tr');
-
-  const cells = [
-    { text: formatTimestamp(evt.timestamp), cls: 'cell-time' },
-    { text: evt.method || '-', cls: 'cell-method' },
-    { text: truncateUrl(evt.url), cls: 'cell-url', title: evt.url },
-    { text: evt.correlationId, cls: 'cell-corr-id', title: evt.correlationId },
-    { text: evt.sourceType, cls: 'cell-source' },
-  ];
-
-  for (const c of cells) {
-    const td = document.createElement('td');
-    td.textContent = c.text;
-    td.className = c.cls;
-    if (c.title) td.title = c.title;
-    tr.appendChild(td);
-  }
-
-  const tdActions = document.createElement('td');
-  tdActions.className = 'cell-actions';
-  const copyBtn = document.createElement('button');
-  copyBtn.textContent = 'Copy';
-  copyBtn.className = 'btn-copy';
-  copyBtn.dataset.corrId = evt.correlationId;
-  tdActions.appendChild(copyBtn);
-  tr.appendChild(tdActions);
+  const tr = createRow(evt);
 
   // Highlight animation
   tr.classList.add('row-new');
@@ -140,4 +71,44 @@ export function prependEvent(evt) {
   tbody.insertBefore(tr, tbody.firstChild);
 
   if (emptyState) emptyState.hidden = true;
+}
+
+function createRow(evt) {
+  const tr = document.createElement('tr');
+  tr.dataset.eventKey = getEventKey(evt);
+
+  const cells = [
+    { text: formatTimestamp(evt.timestamp), cls: 'cell-time' },
+    { text: evt.method || '-', cls: 'cell-method' },
+    { text: getHostname(evt.url) || '-', cls: 'cell-domain', title: getHostname(evt.url) },
+    { text: truncateUrl(evt.url), cls: 'cell-url', title: evt.url },
+    { text: evt.correlationId, cls: 'cell-corr-id', title: evt.correlationId },
+    { text: String(evt.duplicateCount || 1), cls: 'cell-count' },
+    { text: evt.sourceType, cls: 'cell-source' },
+  ];
+
+  for (const cell of cells) {
+    const td = document.createElement('td');
+    td.textContent = cell.text;
+    td.className = cell.cls;
+    if (cell.title) td.title = cell.title;
+    tr.appendChild(td);
+  }
+
+  const tdActions = document.createElement('td');
+  tdActions.className = 'cell-actions';
+  tdActions.appendChild(createCopyButton('ID', 'id', evt));
+  tdActions.appendChild(createCopyButton('Note', 'note', evt));
+  tdActions.appendChild(createCopyButton('JSON', 'json', evt));
+  tr.appendChild(tdActions);
+  return tr;
+}
+
+function createCopyButton(label, format, evt) {
+  const button = document.createElement('button');
+  button.textContent = label;
+  button.className = 'btn-copy';
+  button.dataset.copyFormat = format;
+  button.dataset.eventKey = getEventKey(evt);
+  return button;
 }
