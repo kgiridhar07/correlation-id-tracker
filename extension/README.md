@@ -4,6 +4,8 @@ A production-grade Manifest V3 browser extension that captures and tracks correl
 
 Built for performance engineers, SREs, and debugging workflows.
 
+For the full project design, architecture, data flow, and roadmap, see [`../PDD.md`](../PDD.md).
+
 ---
 
 ## Features
