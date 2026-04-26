@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=600">
-  <title>Correlation ID Tracker</title>
-  <link rel="stylesheet" href="popup.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Correlation ID Tracker Dashboard</title>
+  <link rel="stylesheet" href="../popup/popup.css">
+  <link rel="stylesheet" href="dashboard.css">
 </head>
-<body>
+<body class="full-dashboard">
   <header class="header">
-    <h1>Correlation ID Tracker</h1>
+    <h1>Correlation ID Tracker Dashboard</h1>
     <div class="header-actions">
       <button id="btnRefresh" title="Refresh">&#x21bb;</button>
-      <button id="btnOpenDashboard" title="Open expanded dashboard">Open</button>
       <button id="btnOptions" title="Open options">&#9881;</button>
       <button id="btnClear" title="Clear all logs">&#x1f5d1;</button>
       <button id="btnGenerateReport" title="Generate report">Report</button>
@@ -109,7 +109,7 @@
       <div class="report-header">
         <div>
           <h2>Generated report</h2>
-          <p id="reportMeta">Uses the current popup filters.</p>
+          <p id="reportMeta">Uses the current dashboard filters.</p>
         </div>
         <div class="report-actions">
           <button id="btnCopyReport">Copy Report</button>
@@ -134,9 +134,7 @@
             <th>Actions</th>
           </tr>
         </thead>
-        <tbody id="eventsBody">
-          <!-- rows rendered by tableRenderer.js -->
-        </tbody>
+        <tbody id="eventsBody"></tbody>
       </table>
     </div>
     <p id="emptyState" class="empty-state" hidden>No correlation events captured yet.</p>
@@ -147,6 +145,6 @@
     <span id="statsText"></span>
   </footer>
 
-  <script type="module" src="popup.js"></script>
+  <script type="module" src="../popup/popup.js"></script>
 </body>
 </html>

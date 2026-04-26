@@ -1,0 +1,71 @@
+body.full-dashboard {
+  width: 100vw;
+  min-height: 100vh;
+  max-height: none;
+}
+
+.full-dashboard .header {
+  padding: 12px 20px;
+}
+
+.full-dashboard .header h1 {
+  font-size: 18px;
+}
+
+.full-dashboard .latest-panel,
+.full-dashboard .dashboard,
+.full-dashboard .filters,
+.full-dashboard .report-panel,
+.full-dashboard .footer {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.full-dashboard .metric-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.full-dashboard .metric-card.wide {
+  grid-column: span 2;
+}
+
+.full-dashboard .dashboard-panels {
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+}
+
+.full-dashboard .filters {
+  grid-template-columns: minmax(280px, 1fr) repeat(4, minmax(120px, auto)) auto auto;
+}
+
+.full-dashboard #reportPreview {
+  min-height: 220px;
+  max-height: 360px;
+}
+
+.full-dashboard th:nth-child(1),
+.full-dashboard td.cell-time {
+  width: 170px;
+}
+
+.full-dashboard th:nth-child(3),
+.full-dashboard td.cell-domain {
+  width: 180px;
+}
+
+.full-dashboard th:nth-child(5),
+.full-dashboard td.cell-corr-id {
+  width: 260px;
+}
+
+.full-dashboard th:nth-child(7),
+.full-dashboard td.cell-source {
+  width: 130px;
+}
+
+@media (max-width: 900px) {
+  .full-dashboard .filters,
+  .full-dashboard .metric-grid,
+  .full-dashboard .dashboard-panels {
+    grid-template-columns: 1fr 1fr;
+  }
+}

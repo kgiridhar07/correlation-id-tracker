@@ -21,6 +21,7 @@ For the full project design, architecture, data flow, and roadmap, see [`../PDD.
 - **Duplicate detection** — duplicate counts, duplicate-only filtering, and duplicate collapse mode
 - **Badge count** — toolbar badge increments when new IDs are captured and clears with stored events
 - **Interactive dashboard** — total events, unique IDs, duplicate rate, active domains, request/response split, top lists, and last-hour activity
+- **Expanded dashboard tab** — opens the popup experience in a full browser tab for deeper review
 - **Live popup UI** — latest-ID quick view plus search, source, method, domain, time, and duplicate filters
 - **Copy formats** — copy ID, investigation note, or JSON for each event
 - **Manual reports** — generate a clean investigation summary, copy it, or open a prefilled email draft
@@ -49,6 +50,7 @@ extension/
 │   ├── popup.js               # Popup controller
 │   ├── popup.css              # Dark theme styles
 │   └── tableRenderer.js       # DOM rendering logic
+├── dashboard/                 # Expanded full-tab dashboard
 ├── utils/
 │   ├── constants.js           # All config constants
 │   ├── logger.js              # Level-gated logger
@@ -108,13 +110,14 @@ Firefox support uses the shared WebExtension API wrapper in `utils/browserApi.js
 1. **Browse normally** — the extension silently monitors matching network traffic in the background.
 2. **Click the extension icon** to open the popup dashboard.
 3. **Read the dashboard** — scan total events, unique IDs, duplicate rate, active domains, request/response split, top domains, top methods, repeated IDs, and last-hour activity.
-4. **Use latest ID** — copy the newest ID or a ready-to-paste investigation note from the top panel.
-5. **Filter** — narrow by search text, source, method, domain, time range, or duplicate status.
-6. **Copy** — copy an event as ID, note, or JSON from the Actions column.
-7. **Report** — click "Report" to generate a bounded summary from the current popup filters, then copy it or open an email draft.
-8. **Export** — click "JSON" or "CSV" to download all captured events with metadata.
-9. **Configure** — click the gear button to edit URL filters, headers, page-data watchers, report recipients, retention, and max saved events.
-10. **Clear** — click the trash icon to wipe stored events and reset the badge.
+4. **Open expanded view** — click "Open" in the popup to launch the same dashboard in a full browser tab.
+5. **Use latest ID** — copy the newest ID or a ready-to-paste investigation note from the top panel.
+6. **Filter** — narrow by search text, source, method, domain, time range, or duplicate status.
+7. **Copy** — copy an event as ID, note, or JSON from the Actions column.
+8. **Report** — click "Report" to generate a bounded summary from the current popup filters, then copy it or open an email draft.
+9. **Export** — click "JSON" or "CSV" to download all captured events with metadata.
+10. **Configure** — click the gear button to edit URL filters, headers, page-data watchers, report recipients, retention, and max saved events.
+11. **Clear** — click the trash icon to wipe stored events and reset the badge.
 
 ---
 

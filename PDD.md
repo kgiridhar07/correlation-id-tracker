@@ -82,6 +82,9 @@ extension/
     popup.css
     popup.js
     tableRenderer.js
+  dashboard/
+    dashboard.html
+    dashboard.css
   options/
     options.html
     options.css
@@ -145,7 +148,17 @@ Responsibilities:
 - Generate manual reports.
 - Open email drafts with reviewed report content.
 
-### 7.5 Options UI
+### 7.5 Expanded Dashboard Tab
+
+The expanded dashboard is a full browser tab that reuses the popup controller and renderer with a wider layout. It is launched from the popup with the **Open** button and is intended for deeper investigation when the popup is too constrained.
+
+Responsibilities:
+
+- Reuse the same event loading, filtering, export, report, and copy behavior as the popup.
+- Provide wider table columns and more vertical review space.
+- Keep the quick popup and full dashboard behavior consistent.
+
+### 7.6 Options UI
 
 The options page stores user configuration.
 
@@ -411,8 +424,9 @@ Compatibility target:
 8. Clear previous events.
 9. Browse the target site.
 10. Open the popup dashboard.
-11. Filter to the relevant time/source/domain.
-12. Copy values, export raw data, or generate a report.
+11. Open the expanded dashboard tab when more space is needed.
+12. Filter to the relevant time/source/domain.
+13. Copy values, export raw data, or generate a report.
 
 ## 18. Roadmap
 
