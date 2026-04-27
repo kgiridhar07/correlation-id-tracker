@@ -2,35 +2,21 @@
  * @fileoverview Order flow stitching helpers for SKU-to-delivery investigations.
  */
 
-const MILESTONES = Object.freeze([
-  {
-    key: 'sourcingOptions',
-    label: 'Sourcing Options',
-    patterns: ['sourcing-options', 'sourcing options', 'sourcing'],
-  },
-  {
-    key: 'capacity',
-    label: 'Capacity',
-    patterns: ['capacity'],
-  },
-  {
-    key: 'reserveDelivery',
-    label: 'Reserve Delivery',
-    patterns: ['reserve-delivery', 'reserve delivery', 'reserve'],
-  },
-]);
+import { ORDER_FLOW_MILESTONES } from './constants.js';
 
 /**
  * Build a stitched order flow report from captured events and manual context.
  * @param {Array<Object>} events newest-first
  * @param {Object} flowState
  * @param {number} [now]
+ * @param {Array<Object>|Array<string>|string} [milestones]
  * @returns {{ subject: string, body: string, matchedEvents: Array<Object> }}
  */
-export function buildOrderFlowReport(events, flowState = {}, now = Date.now()) {
+export function buildOrderFlowReport(events, flowState = {}, now = Date.now(), milestones = ORDER_FLOW_MILESTONES) {
   const selectedEvents = filterEventsForFlow(events, flowState, now);
   const quoteId = findQuoteId(selectedEvents);
-  const milestoneMatches = MILESTONES.map((milestone) => ({
+  const normalizedMilestones = normalizeOrderFlowMilestones(milestones);
+  const milestoneMatches = normalizedMilestones.map((milestone) => ({
     ...milestone,
     events: findMilestoneEvents(selectedEvents, milestone.patterns),
   }));
@@ -81,7 +67,38 @@ export function buildOrderFlowReport(events, flowState = {}, now = Date.now()) {
 }
 
 export function getOrderFlowMilestones() {
-  return MILESTONES.map((milestone) => ({ ...milestone, patterns: [...milestone.patterns] }));
+  return cloneMilestones(ORDER_FLOW_MILESTONES);
+}
+
+export function normalizeOrderFlowMilestones(value = ORDER_FLOW_MILESTONES) {
+  const defaultsByKey = new Map(ORDER_FLOW_MILESTONES.map((milestone) => [milestone.key, milestone]));
+  const nextByKey = new Map(ORDER_FLOW_MILESTONES.map((milestone) => [
+    milestone.key,
+    { ...milestone, patterns: [] },
+  ]));
+  const items = Array.isArray(value) ? value : String(value || '').split('\n');
+
+  for (const item of items) {
+    const parsed = parseMilestoneItem(item);
+    if (!parsed) continue;
+    const key = getMilestoneKey(parsed.label);
+    if (!key || !nextByKey.has(key)) continue;
+    const milestone = nextByKey.get(key);
+    milestone.patterns.push(...parsed.patterns);
+  }
+
+  return Array.from(nextByKey.values()).map((milestone) => {
+    const patterns = Array.from(new Set(milestone.patterns.map((pattern) => pattern.trim().toLowerCase()).filter(Boolean)));
+    return patterns.length
+      ? { ...milestone, patterns }
+      : { ...defaultsByKey.get(milestone.key), patterns: [...defaultsByKey.get(milestone.key).patterns] };
+  });
+}
+
+export function formatOrderFlowMilestoneLines(milestones = ORDER_FLOW_MILESTONES) {
+  return normalizeOrderFlowMilestones(milestones)
+    .map((milestone) => `${milestone.label} | ${milestone.patterns.join('; ')}`)
+    .join('\n');
 }
 
 function filterEventsForFlow(events, flowState, now) {
@@ -125,4 +142,31 @@ function formatWindow(flowState, now) {
 
 function formatTime(timestamp) {
   return timestamp ? new Date(timestamp).toLocaleString('en-US', { hour12: false }) : '-';
+}
+
+function cloneMilestones(milestones) {
+  return milestones.map((milestone) => ({ ...milestone, patterns: [...milestone.patterns] }));
+}
+
+function parseMilestoneItem(item) {
+  if (item && typeof item === 'object') {
+    const label = String(item.label || '').trim();
+    const patterns = Array.isArray(item.patterns) ? item.patterns : String(item.patterns || '').split(/[;,\n]/);
+    return label ? { label, patterns: patterns.map(String) } : null;
+  }
+
+  const line = String(item || '').trim();
+  if (!line || !line.includes('|')) return null;
+  const [labelPart, patternPart] = line.split('|');
+  const label = labelPart.trim();
+  const patterns = String(patternPart || '').split(/[;,]/).map((pattern) => pattern.trim());
+  return label && patterns.length ? { label, patterns } : null;
+}
+
+function getMilestoneKey(label) {
+  const normalized = String(label || '').toLowerCase();
+  if (normalized.includes('sourcing') || normalized.includes('source')) return 'sourcingOptions';
+  if (normalized.includes('capacity')) return 'capacity';
+  if (normalized.includes('reserve')) return 'reserveDelivery';
+  return '';
 }

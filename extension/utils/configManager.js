@@ -4,6 +4,7 @@
 
 import { CONFIG, DEFAULT_CONFIG } from './constants.js';
 import { getLocalStorage, setLocalStorage } from './browserApi.js';
+import { normalizeOrderFlowMilestones } from './flowUtils.js';
 import { normalizePageDataWatchers } from './pageDataUtils.js';
 
 let activeConfig = { ...DEFAULT_CONFIG };
@@ -39,6 +40,7 @@ export function normalizeConfig(value = {}) {
     urlFilters: normalizeStringList(value.urlFilters, DEFAULT_CONFIG.urlFilters),
     correlationHeaders: normalizeStringList(value.correlationHeaders, DEFAULT_CONFIG.correlationHeaders),
     pageDataWatchers: normalizePageDataWatchers(value.pageDataWatchers),
+    orderFlowMilestones: normalizeOrderFlowMilestones(value.orderFlowMilestones),
     pageDataPollMs: Number.isFinite(pageDataPollMs) ? clamp(pageDataPollMs, 250, 10000) : DEFAULT_CONFIG.pageDataPollMs,
     pageDataDurationSeconds: Number.isFinite(pageDataDurationSeconds) ? clamp(pageDataDurationSeconds, 1, 120) : DEFAULT_CONFIG.pageDataDurationSeconds,
     reportRecipients: normalizeEmailList(value.reportRecipients),
@@ -82,6 +84,7 @@ export function getConfig() {
     urlFilters: [...activeConfig.urlFilters],
     correlationHeaders: [...activeConfig.correlationHeaders],
     pageDataWatchers: activeConfig.pageDataWatchers.map((watcher) => ({ ...watcher })),
+    orderFlowMilestones: activeConfig.orderFlowMilestones.map((milestone) => ({ ...milestone, patterns: [...milestone.patterns] })),
     pageDataPollMs: activeConfig.pageDataPollMs,
     pageDataDurationSeconds: activeConfig.pageDataDurationSeconds,
     reportRecipients: [...activeConfig.reportRecipients],

@@ -2,7 +2,7 @@ import { extractCorrelationIds } from '../background/correlationExtractor.js';
 import { normalizeConfig } from '../utils/configManager.js';
 import { buildDuplicateCounts, collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
 import { isRelevantUrl } from '../utils/helpers.js';
-import { buildOrderFlowReport } from '../utils/flowUtils.js';
+import { buildOrderFlowReport, normalizeOrderFlowMilestones } from '../utils/flowUtils.js';
 import { normalizePageDataWatchers, parseDataPath, serializePageValue } from '../utils/pageDataUtils.js';
 import { buildInvestigationReport } from '../utils/reportUtils.js';
 
@@ -30,6 +30,7 @@ test('normalizes config and clamps storage limits', () => {
     urlFilters: ['API', '', 'api'],
     correlationHeaders: 'X-Trace-ID\n\nRequest-ID',
     pageDataWatchers: 'Cart ID | digitalData.cart.cartId',
+    orderFlowMilestones: 'Sourcing Options | /v1/source/options\nCapacity | /v1/capacity/check\nReserve Delivery | /v1/delivery/reserve',
     pageDataPollMs: '50',
     pageDataDurationSeconds: '999',
     reportRecipients: 'SRE-Team@Example.com\nnot-email\nmanager@example.com',
@@ -39,6 +40,7 @@ test('normalizes config and clamps storage limits', () => {
   assertDeepEqual(config.urlFilters, ['api']);
   assertDeepEqual(config.correlationHeaders, ['x-trace-id', 'request-id']);
   assertDeepEqual(config.pageDataWatchers, [{ label: 'Cart ID', path: 'digitalData.cart.cartId' }]);
+  assertDeepEqual(config.orderFlowMilestones.map((milestone) => milestone.patterns[0]), ['/v1/source/options', '/v1/capacity/check', '/v1/delivery/reserve']);
   assertEqual(config.pageDataPollMs, 250);
   assertEqual(config.pageDataDurationSeconds, 120);
   assertDeepEqual(config.reportRecipients, ['sre-team@example.com', 'manager@example.com']);
@@ -143,6 +145,24 @@ test('stitches an order flow report from manual fields and milestones', () => {
   assertEqual(report.body.includes('sourcing-corr'), true);
   assertEqual(report.body.includes('capacity-corr'), true);
   assertEqual(report.body.includes('reserve-corr'), true);
+});
+
+test('stitches an order flow report with configured milestone paths', () => {
+  const now = 1000000;
+  const milestones = normalizeOrderFlowMilestones([
+    'Sourcing Options | /commerce/source-options',
+    'Capacity | /delivery-capacity/check',
+    'Reserve Delivery | /appointments/reservations',
+  ]);
+  const events = [
+    { correlationId: 'custom-reserve', timestamp: now - 1000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/appointments/reservations' },
+    { correlationId: 'custom-capacity', timestamp: now - 2000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/delivery-capacity/check' },
+    { correlationId: 'custom-sourcing', timestamp: now - 3000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/commerce/source-options' },
+  ];
+  const report = buildOrderFlowReport(events, { startTime: now - 5000, endTime: now }, now, milestones);
+  assertEqual(report.body.includes('custom-sourcing'), true);
+  assertEqual(report.body.includes('custom-capacity'), true);
+  assertEqual(report.body.includes('custom-reserve'), true);
 });
 
 function test(name, fn) {

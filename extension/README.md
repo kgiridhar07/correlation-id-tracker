@@ -198,6 +198,22 @@ Reserve Delivery correlation IDs from URLs containing reserve-delivery or reserv
 
 The flow report combines manual context, the DOM Quote ID, and matching network header captures into one stitched timeline.
 
+Milestone URL matching is configurable in Options. Use one line per milestone:
+
+```text
+Sourcing Options | /your/sourcing/path
+Capacity | /your/capacity/path
+Reserve Delivery | /your/reserve/path
+```
+
+You can put multiple patterns on a line with semicolons:
+
+```text
+Sourcing Options | /sourcing-options; /source/options
+```
+
+The extension still captures the ID from configured network headers. These milestone patterns only tell the Flow Report which captured network events belong under each step.
+
 ---
 
 ## Captured Event Schema

@@ -19,6 +19,25 @@ export const URL_FILTERS = Object.freeze([
   '/api/',
 ]);
 
+/** Default URL patterns used to stitch order-flow milestone correlation IDs. */
+export const ORDER_FLOW_MILESTONES = Object.freeze([
+  {
+    key: 'sourcingOptions',
+    label: 'Sourcing Options',
+    patterns: ['sourcing-options', 'sourcing options', 'sourcing'],
+  },
+  {
+    key: 'capacity',
+    label: 'Capacity',
+    patterns: ['capacity'],
+  },
+  {
+    key: 'reserveDelivery',
+    label: 'Reserve Delivery',
+    patterns: ['reserve-delivery', 'reserve delivery', 'reserve'],
+  },
+]);
+
 /** Persisted user configuration */
 export const CONFIG = Object.freeze({
   STORAGE_KEY: 'correlationTrackerConfig',
@@ -52,6 +71,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   pageDataWatchers: [],
   pageDataPollMs: 1000,
   pageDataDurationSeconds: 30,
+  orderFlowMilestones: ORDER_FLOW_MILESTONES,
   reportRecipients: [],
   maxEvents: STORAGE_LIMITS.MAX_EVENTS,
   retentionHours: 24,

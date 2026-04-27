@@ -356,10 +356,11 @@ function stopFlow() {
   setStatus('Order flow stopped');
 }
 
-function generateFlowReport() {
+async function generateFlowReport() {
   flowState = { ...flowState, ...readFlowInputs() };
   saveFlowState();
-  const report = buildOrderFlowReport(allEvents, flowState);
+  const config = await getConfig();
+  const report = buildOrderFlowReport(allEvents, flowState, Date.now(), config.orderFlowMilestones);
   currentReport = {
     subject: report.subject,
     body: report.body,

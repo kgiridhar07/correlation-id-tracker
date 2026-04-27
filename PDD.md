@@ -174,6 +174,7 @@ Configurable values:
 - URL filters.
 - Correlation header names.
 - Page-data watchers.
+- Order flow milestone URL patterns.
 - Page-data polling interval.
 - Page-data capture duration.
 - Report recipients.
@@ -368,6 +369,14 @@ Automatic values:
 - Capacity correlation IDs from URLs containing `capacity`.
 - Reserve Delivery correlation IDs from URLs containing `reserve-delivery`, `reserve delivery`, or `reserve`.
 
+Milestone URL patterns are user-configurable in Options with this format:
+
+```text
+Sourcing Options | /your/sourcing/path
+Capacity | /your/capacity/path
+Reserve Delivery | /your/reserve/path
+```
+
 If the flow is still active, the current time is used as the report window end.
 
 ## 13. Security And Privacy Design
@@ -480,7 +489,6 @@ Compatibility target:
 
 - Optional host permissions.
 - Capture session start/stop mode.
-- Configurable order flow milestones.
 - Report section toggles.
 - Per-domain configuration profiles.
 
@@ -496,7 +504,6 @@ Compatibility target:
 - Should full URLs be stored, or should query strings be removed by default?
 - Should page-data capture require a separate enable toggle per domain?
 - Should reports include raw recent samples by default, or require explicit opt-in?
-- Should order flow milestone URL patterns be configurable in Options?
 - Should this remain an unpacked/private tool, or should it be hardened for Chrome Web Store distribution?
 
 ## 20. Final Design Position
