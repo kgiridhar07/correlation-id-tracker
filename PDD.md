@@ -64,7 +64,7 @@ The user exports JSON or CSV when a complete raw dataset is needed.
 
 ### 5.5 Stitch Order Flow
 
-The user enters SKU, customer, address, and delivery type, starts a flow window, performs the ordering journey, then generates a report that includes Quote ID plus Sourcing Options, Capacity, and Reserve Delivery correlation IDs.
+The user clears old events, performs the ordering journey, then generates a report that includes captured business context plus Sourcing Options, Capacity, and Reserve Delivery correlation IDs.
 
 ## 6. Architecture
 
@@ -352,9 +352,9 @@ Email behavior:
 
 ### Order Flow Reports
 
-Order flow reports combine manual business context with events captured during a bounded flow window.
+Order flow reports combine optional manual overrides with captured page values and matching network events from the current captured event set.
 
-Manual fields:
+Optional manual overrides:
 
 - SKU.
 - Customer.
@@ -381,7 +381,7 @@ Capacity | /your/capacity/path
 Reserve Delivery | /your/reserve/path
 ```
 
-If the flow is still active, the current time is used as the report window end.
+The normal workflow does not require Start/Stop controls. Users should clear old events before a new order journey when they want a clean report.
 
 ## 13. Security And Privacy Design
 
@@ -422,7 +422,7 @@ If the flow is still active, the current time is used as the report window end.
 - Popup rendering limits visible rows.
 - UI refresh uses debounce.
 - Reports include bounded samples instead of all rows.
-- Flow reports scan only the selected capture window and milestone keywords.
+- Flow reports scan captured events and milestone keywords, then show the best matched ID per milestone.
 
 ## 15. Browser Support
 
@@ -476,7 +476,7 @@ Compatibility target:
 9. Browse the target site.
 10. Open the popup dashboard.
 11. Open the expanded dashboard tab when more space is needed.
-12. Enter order flow fields and click Start Flow when testing SKU-to-delivery journeys.
+12. Clear old events before testing SKU-to-delivery journeys.
 13. Filter to the relevant time/source/domain.
 14. Copy values, export raw data, generate a report, or generate a flow report.
 

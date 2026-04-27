@@ -26,7 +26,7 @@ export function buildOrderFlowReport(events, flowState = {}, now = Date.now(), m
   lines.push('Order Flow Report');
   lines.push('=================');
   lines.push(`Generated: ${formatTime(now)}`);
-  lines.push(`Capture window: ${formatWindow(flowState, now)}`);
+  lines.push(`Detection scope: ${formatWindow(flowState, now)}`);
   lines.push('');
   lines.push('Business Context');
   lines.push('----------------');
@@ -177,7 +177,7 @@ function dedupeMilestoneEvents(events) {
 function formatWindow(flowState, now) {
   const startTime = Number(flowState.startTime) || null;
   const endTime = Number(flowState.endTime) || now;
-  if (!startTime) return 'Not started';
+  if (!startTime) return 'All captured events';
   return `${formatTime(startTime)} to ${flowState.active ? 'active' : formatTime(endTime)}`;
 }
 

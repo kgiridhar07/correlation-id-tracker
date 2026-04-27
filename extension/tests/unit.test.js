@@ -165,6 +165,25 @@ test('stitches an order flow report with configured milestone paths', () => {
   assertEqual(report.body.includes('custom-reserve'), true);
 });
 
+test('auto-detects order flow from all captured events without start stop', () => {
+  const now = 1000000;
+  const milestones = normalizeOrderFlowMilestones([
+    'Sourcing Options | sourcingOptions',
+    'Capacity | sourcingOptions?callType=capacity',
+    'Reserve Delivery | reserveDelivery',
+  ]);
+  const events = [
+    { correlationId: 'auto-capacity', timestamp: now - 1000, sourceType: 'response-header', method: 'GET', url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { correlationId: 'auto-sourcing', timestamp: now - 2000, sourceType: 'response-header', method: 'GET', url: 'https://api.example.com/sourcingOptions' },
+    { correlationId: 'H9179-307080', timestamp: now - 3000, sourceType: 'page-data', fieldLabel: 'Quote ID', fieldPath: 'dom:[data-testid="order-number"]', method: 'PAGE', url: 'https://orderup.example.com/quote' },
+  ];
+  const report = buildOrderFlowReport(events, {}, now, milestones);
+  assertEqual(report.body.includes('Detection scope: All captured events'), true);
+  assertEqual(report.body.includes('Quote ID: H9179-307080'), true);
+  assertEqual(report.body.includes('auto-sourcing'), true);
+  assertEqual(report.body.includes('auto-capacity'), true);
+});
+
 test('uses the most specific milestone pattern for overlapping URLs', () => {
   const now = 1000000;
   const milestones = normalizeOrderFlowMilestones([

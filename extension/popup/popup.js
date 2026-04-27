@@ -24,8 +24,6 @@ const btnOpenDashboard = document.getElementById('btnOpenDashboard');
 const btnOptions = document.getElementById('btnOptions');
 const btnClear = document.getElementById('btnClear');
 const btnGenerateReport = document.getElementById('btnGenerateReport');
-const btnStartFlow = document.getElementById('btnStartFlow');
-const btnStopFlow = document.getElementById('btnStopFlow');
 const btnGenerateFlow = document.getElementById('btnGenerateFlow');
 const btnExportJson = document.getElementById('btnExportJson');
 const btnExportCsv = document.getElementById('btnExportCsv');
@@ -332,32 +330,8 @@ function buildScopeLabel() {
   return parts.length ? parts.join(', ') : 'All captured events';
 }
 
-function startFlow() {
-  flowState = {
-    ...readFlowInputs(),
-    startTime: Date.now(),
-    endTime: null,
-    active: true,
-  };
-  saveFlowState();
-  updateFlowUi();
-  setStatus('Order flow started');
-}
-
-function stopFlow() {
-  flowState = {
-    ...flowState,
-    ...readFlowInputs(),
-    endTime: Date.now(),
-    active: false,
-  };
-  saveFlowState();
-  updateFlowUi();
-  setStatus('Order flow stopped');
-}
-
 async function generateFlowReport() {
-  flowState = { ...flowState, ...readFlowInputs() };
+  flowState = readFlowInputs();
   saveFlowState();
   const config = await getConfig();
   const report = buildOrderFlowReport(allEvents, flowState, Date.now(), config.orderFlowMilestones);
@@ -367,7 +341,7 @@ async function generateFlowReport() {
     truncatedBody: report.body,
   };
   reportPreview.value = report.body;
-  reportMeta.textContent = `${report.matchedEvents.length} flow-window events stitched from manual fields, Quote ID, and milestone URLs.`;
+  reportMeta.textContent = `${report.matchedEvents.length} captured events scanned. Flow fields are auto-detected from page data and milestone URL patterns.`;
   reportPanel.hidden = false;
   setStatus('Flow report generated');
 }
@@ -384,20 +358,31 @@ function readFlowInputs() {
 
 function loadStoredFlowState() {
   try {
-    return JSON.parse(localStorage.getItem(FLOW_STORAGE_KEY)) || {};
+    const stored = JSON.parse(localStorage.getItem(FLOW_STORAGE_KEY)) || {};
+    return pickFlowInputs(stored);
   } catch (_err) {
     return {};
   }
 }
 
 function saveFlowState() {
-  localStorage.setItem(FLOW_STORAGE_KEY, JSON.stringify(flowState));
+  localStorage.setItem(FLOW_STORAGE_KEY, JSON.stringify(pickFlowInputs(flowState)));
 }
 
 function persistFlowInputs() {
-  flowState = { ...flowState, ...readFlowInputs() };
+  flowState = readFlowInputs();
   saveFlowState();
   updateFlowUi();
+}
+
+function pickFlowInputs(value) {
+  return {
+    sku: value.sku || '',
+    customer: value.customer || '',
+    address: value.address || '',
+    deliveryType: value.deliveryType || '',
+    notes: value.notes || '',
+  };
 }
 
 function updateFlowUi() {
@@ -408,13 +393,7 @@ function updateFlowUi() {
   if (flowNotes) flowNotes.value = flowState.notes || '';
   if (!flowStatus) return;
 
-  if (flowState.active && flowState.startTime) {
-    flowStatus.textContent = `Active since ${formatTimestamp(flowState.startTime)}`;
-  } else if (flowState.startTime) {
-    flowStatus.textContent = `Stopped: ${formatTimestamp(flowState.startTime)} to ${formatTimestamp(flowState.endTime || Date.now())}`;
-  } else {
-    flowStatus.textContent = 'Not started';
-  }
+  flowStatus.textContent = 'Auto-detects from captured events';
 }
 
 async function clearEvents() {
@@ -572,8 +551,6 @@ function attachListeners() {
   btnOptions.addEventListener('click', openOptions);
   btnClear.addEventListener('click', clearEvents);
   btnGenerateReport.addEventListener('click', generateReport);
-  if (btnStartFlow) btnStartFlow.addEventListener('click', startFlow);
-  if (btnStopFlow) btnStopFlow.addEventListener('click', stopFlow);
   if (btnGenerateFlow) btnGenerateFlow.addEventListener('click', generateFlowReport);
   [flowSku, flowCustomer, flowAddress, flowDeliveryType, flowNotes]
     .filter(Boolean)
