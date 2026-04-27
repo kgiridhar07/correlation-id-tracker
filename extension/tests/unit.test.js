@@ -2,6 +2,7 @@ import { extractCorrelationIds } from '../background/correlationExtractor.js';
 import { normalizeConfig } from '../utils/configManager.js';
 import { buildDuplicateCounts, collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
 import { isRelevantUrl } from '../utils/helpers.js';
+import { buildOrderFlowReport } from '../utils/flowUtils.js';
 import { normalizePageDataWatchers, parseDataPath, serializePageValue } from '../utils/pageDataUtils.js';
 import { buildInvestigationReport } from '../utils/reportUtils.js';
 
@@ -118,6 +119,30 @@ test('builds a bounded investigation report', () => {
   assertEqual(report.body.includes('Cart ID: cart-123'), true);
   assertEqual(report.body.includes('Recent Event Sample (3 of 3)'), true);
   assertEqual(report.truncatedBody.length <= report.body.length, true);
+});
+
+test('stitches an order flow report from manual fields and milestones', () => {
+  const now = 1000000;
+  const events = [
+    { correlationId: 'reserve-corr', timestamp: now - 1000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/reserve-delivery' },
+    { correlationId: 'capacity-corr', timestamp: now - 2000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/capacity' },
+    { correlationId: 'sourcing-corr', timestamp: now - 3000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/sourcing-options' },
+    { correlationId: 'H9179-307073', timestamp: now - 4000, sourceType: 'page-data', fieldLabel: 'Quote ID', fieldPath: 'dom:[data-testid="order-number"]', method: 'PAGE', url: 'https://orderup.example.com/quote' },
+  ];
+  const report = buildOrderFlowReport(events, {
+    sku: '123456',
+    customer: 'Giridhar',
+    address: '123 Main St',
+    deliveryType: 'Scheduled Delivery',
+    startTime: now - 5000,
+    endTime: now,
+  }, now);
+  assertEqual(report.body.includes('SKU: 123456'), true);
+  assertEqual(report.body.includes('Quote ID: H9179-307073'), true);
+  assertEqual(report.body.includes('Sourcing Options:'), true);
+  assertEqual(report.body.includes('sourcing-corr'), true);
+  assertEqual(report.body.includes('capacity-corr'), true);
+  assertEqual(report.body.includes('reserve-corr'), true);
 });
 
 function test(name, fn) {

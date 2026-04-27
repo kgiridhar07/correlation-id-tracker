@@ -33,6 +33,27 @@
       </div>
     </section>
 
+    <section class="flow-panel" aria-label="Order flow capture">
+      <div class="flow-header">
+        <div>
+          <h2>Order Flow Capture</h2>
+          <p id="flowStatus">Not started</p>
+        </div>
+        <div class="flow-actions">
+          <button id="btnStartFlow">Start Flow</button>
+          <button id="btnStopFlow">Stop</button>
+          <button id="btnGenerateFlow">Flow Report</button>
+        </div>
+      </div>
+      <div class="flow-fields">
+        <input id="flowSku" type="text" placeholder="SKU" autocomplete="off">
+        <input id="flowCustomer" type="text" placeholder="Customer" autocomplete="off">
+        <input id="flowAddress" type="text" placeholder="Address" autocomplete="off">
+        <input id="flowDeliveryType" type="text" placeholder="Delivery Type" autocomplete="off">
+      </div>
+      <input id="flowNotes" class="flow-notes" type="text" placeholder="Notes" autocomplete="off">
+    </section>
+
     <section class="dashboard" aria-label="Correlation dashboard">
       <div class="metric-grid">
         <div class="metric-card">

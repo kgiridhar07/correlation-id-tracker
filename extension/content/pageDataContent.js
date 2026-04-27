@@ -4,6 +4,9 @@
   const BRIDGE_ID = 'cid-tracker-page-data-bridge';
   const DEFAULT_POLL_MS = 1000;
   const DEFAULT_DURATION_SECONDS = 30;
+  const DOM_WATCHERS = Object.freeze([
+    { label: 'Quote ID', selector: '[data-testid="order-number"]' },
+  ]);
 
   const extensionApi = globalThis.browser && globalThis.browser.runtime ? globalThis.browser : chrome;
   const runtime = extensionApi.runtime;
@@ -48,7 +51,7 @@
 
   function shouldCapture(url, config) {
     const watchers = config && Array.isArray(config.pageDataWatchers) ? config.pageDataWatchers : [];
-    if (!watchers.length) return false;
+    if (!watchers.length && DOM_WATCHERS.length === 0) return false;
     const lowerUrl = String(url || '').toLowerCase();
     const filters = Array.isArray(config.urlFilters) ? config.urlFilters : [];
     return filters.some((filter) => lowerUrl.includes(String(filter).toLowerCase()));
@@ -65,12 +68,38 @@
 
   function scanOnce() {
     if (!activeConfig || !shouldCapture(location.href, activeConfig)) return;
+    scanDomWatchers().catch(() => undefined);
     window.postMessage({
       source: CONTENT_SOURCE,
       type: 'SCAN_PAGE_DATA',
       requestId: `scan-${Date.now()}-${scanSequence++}`,
       watchers: activeConfig.pageDataWatchers,
     }, '*');
+  }
+
+  async function scanDomWatchers() {
+    for (const watcher of DOM_WATCHERS) {
+      const element = document.querySelector(watcher.selector);
+      const value = element ? String(element.textContent || '').replace(/\u00a0/g, ' ').trim() : '';
+      if (!value) continue;
+
+      const path = `dom:${watcher.selector}`;
+      const key = `${location.href}|${path}|${value}`;
+      if (lastValues.get(path) === key) continue;
+      lastValues.set(path, key);
+
+      await sendRuntimeMessage({
+        type: 'CAPTURE_PAGE_DATA',
+        data: {
+          requestId: `dom-${Date.now()}-${scanSequence++}`,
+          url: location.href,
+          label: watcher.label,
+          path,
+          value,
+          valueType: 'dom-text',
+        },
+      });
+    }
   }
 
   function checkUrlChange() {

@@ -196,6 +196,79 @@ main {
   flex-shrink: 0;
 }
 
+.flow-panel {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  background: #201f1b;
+  border-bottom: 1px solid #3b3628;
+}
+
+.flow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.flow-header h2 {
+  margin: 0 0 3px;
+  color: #fff3b0;
+  font-size: 13px;
+}
+
+.flow-header p {
+  margin: 0;
+  color: #b8b09a;
+  font-size: 11px;
+}
+
+.flow-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.flow-actions button {
+  padding: 4px 8px;
+  border: 1px solid #5f563d;
+  border-radius: 4px;
+  background: #302b1f;
+  color: #f1e5b8;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.flow-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.flow-fields input,
+.flow-notes {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #4a4434;
+  border-radius: 4px;
+  background: #1e1e1e;
+  color: #e0e0e0;
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+}
+
+.flow-notes {
+  margin-top: 6px;
+}
+
+.flow-fields input:focus,
+.flow-notes:focus {
+  border-color: #d7ba7d;
+}
+
 .dashboard {
   padding: 10px 14px;
   background: #1b1b1c;

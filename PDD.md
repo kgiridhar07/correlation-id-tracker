@@ -14,6 +14,7 @@ This project is primarily designed for private/internal testing environments, in
 - Support request headers, response headers, and configurable page data such as `digitalData.cart.cartId`.
 - Keep all captured data local to the browser unless the user explicitly exports, copies, or opens an email draft.
 - Provide a clear popup dashboard for quick diagnosis.
+- Stitch order-flow context from manual SKU/customer/address/delivery details, DOM Quote ID, and key network correlation IDs.
 - Support high-volume browser sessions with retention, batching, duplicate detection, and bounded reports.
 - Make configuration flexible enough for different sites and header conventions.
 
@@ -61,6 +62,10 @@ The user filters captured events, generates a bounded report, reviews it, copies
 
 The user exports JSON or CSV when a complete raw dataset is needed.
 
+### 5.5 Stitch Order Flow
+
+The user enters SKU, customer, address, and delivery type, starts a flow window, performs the ordering journey, then generates a report that includes Quote ID plus Sourcing Options, Capacity, and Reserve Delivery correlation IDs.
+
 ## 6. Architecture
 
 ```text
@@ -94,6 +99,7 @@ extension/
     configManager.js
     constants.js
     dataUtils.js
+    flowUtils.js
     helpers.js
     logger.js
     pageDataUtils.js
@@ -147,6 +153,7 @@ Responsibilities:
 - Export JSON/CSV.
 - Generate manual reports.
 - Open email drafts with reviewed report content.
+- Start, stop, and generate order flow reports.
 
 ### 7.5 Expanded Dashboard Tab
 
@@ -199,6 +206,14 @@ Page globals
   -> storageManager queue
   -> IndexedDB
   -> popup dashboard/export/report
+
+DOM Quote ID
+  -> pageDataContent reads [data-testid="order-number"]
+  -> runtime message
+  -> background messageBus
+  -> storageManager queue
+  -> IndexedDB
+  -> order flow report
 
 User configuration
   -> options page
@@ -334,6 +349,27 @@ Email behavior:
 - Does not send automatically.
 - Does not store email passwords or API secrets.
 
+### Order Flow Reports
+
+Order flow reports combine manual business context with events captured during a bounded flow window.
+
+Manual fields:
+
+- SKU.
+- Customer.
+- Address.
+- Delivery Type.
+- Notes.
+
+Automatic values:
+
+- Quote ID from `[data-testid="order-number"]`.
+- Sourcing Options correlation IDs from URLs containing `sourcing-options`, `sourcing options`, or `sourcing`.
+- Capacity correlation IDs from URLs containing `capacity`.
+- Reserve Delivery correlation IDs from URLs containing `reserve-delivery`, `reserve delivery`, or `reserve`.
+
+If the flow is still active, the current time is used as the report window end.
+
 ## 13. Security And Privacy Design
 
 ### Current Protections
@@ -373,6 +409,7 @@ Email behavior:
 - Popup rendering limits visible rows.
 - UI refresh uses debounce.
 - Reports include bounded samples instead of all rows.
+- Flow reports scan only the selected capture window and milestone keywords.
 
 ## 15. Browser Support
 
@@ -400,6 +437,7 @@ Compatibility target:
 - CSV escaping.
 - Dashboard summaries.
 - Report generation.
+- Order flow stitching.
 
 ### Manual Testing
 
@@ -425,8 +463,9 @@ Compatibility target:
 9. Browse the target site.
 10. Open the popup dashboard.
 11. Open the expanded dashboard tab when more space is needed.
-12. Filter to the relevant time/source/domain.
-13. Copy values, export raw data, or generate a report.
+12. Enter order flow fields and click Start Flow when testing SKU-to-delivery journeys.
+13. Filter to the relevant time/source/domain.
+14. Copy values, export raw data, generate a report, or generate a flow report.
 
 ## 18. Roadmap
 
@@ -441,6 +480,7 @@ Compatibility target:
 
 - Optional host permissions.
 - Capture session start/stop mode.
+- Configurable order flow milestones.
 - Report section toggles.
 - Per-domain configuration profiles.
 
@@ -456,6 +496,7 @@ Compatibility target:
 - Should full URLs be stored, or should query strings be removed by default?
 - Should page-data capture require a separate enable toggle per domain?
 - Should reports include raw recent samples by default, or require explicit opt-in?
+- Should order flow milestone URL patterns be configurable in Options?
 - Should this remain an unpacked/private tool, or should it be hardened for Chrome Web Store distribution?
 
 ## 20. Final Design Position

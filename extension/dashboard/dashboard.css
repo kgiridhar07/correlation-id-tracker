@@ -13,6 +13,7 @@ body.full-dashboard {
 }
 
 .full-dashboard .latest-panel,
+.full-dashboard .flow-panel,
 .full-dashboard .dashboard,
 .full-dashboard .filters,
 .full-dashboard .report-panel,
@@ -35,6 +36,10 @@ body.full-dashboard {
 
 .full-dashboard .filters {
   grid-template-columns: minmax(280px, 1fr) repeat(4, minmax(120px, auto)) auto auto;
+}
+
+.full-dashboard .flow-fields {
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
 }
 
 .full-dashboard #reportPreview {
@@ -64,6 +69,7 @@ body.full-dashboard {
 
 @media (max-width: 900px) {
   .full-dashboard .filters,
+  .full-dashboard .flow-fields,
   .full-dashboard .metric-grid,
   .full-dashboard .dashboard-panels {
     grid-template-columns: 1fr 1fr;

@@ -6,8 +6,11 @@ import { MSG, UI } from '../utils/constants.js';
 import { getExtensionApi, sendRuntimeMessage } from '../utils/browserApi.js';
 import { collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
 import { debounce, formatTimestamp, getEventKey, getHostname } from '../utils/helpers.js';
+import { buildOrderFlowReport } from '../utils/flowUtils.js';
 import { buildInvestigationReport } from '../utils/reportUtils.js';
 import { initRenderer, renderEvents, prependEvent } from './tableRenderer.js';
+
+const FLOW_STORAGE_KEY = 'correlationTrackerOrderFlow';
 
 const searchInput = document.getElementById('searchInput');
 const sourceFilter = document.getElementById('sourceFilter');
@@ -21,6 +24,9 @@ const btnOpenDashboard = document.getElementById('btnOpenDashboard');
 const btnOptions = document.getElementById('btnOptions');
 const btnClear = document.getElementById('btnClear');
 const btnGenerateReport = document.getElementById('btnGenerateReport');
+const btnStartFlow = document.getElementById('btnStartFlow');
+const btnStopFlow = document.getElementById('btnStopFlow');
+const btnGenerateFlow = document.getElementById('btnGenerateFlow');
 const btnExportJson = document.getElementById('btnExportJson');
 const btnExportCsv = document.getElementById('btnExportCsv');
 const btnCopyReport = document.getElementById('btnCopyReport');
@@ -34,6 +40,12 @@ const latestMeta = document.getElementById('latestMeta');
 const reportPanel = document.getElementById('reportPanel');
 const reportPreview = document.getElementById('reportPreview');
 const reportMeta = document.getElementById('reportMeta');
+const flowStatus = document.getElementById('flowStatus');
+const flowSku = document.getElementById('flowSku');
+const flowCustomer = document.getElementById('flowCustomer');
+const flowAddress = document.getElementById('flowAddress');
+const flowDeliveryType = document.getElementById('flowDeliveryType');
+const flowNotes = document.getElementById('flowNotes');
 const eventsBody = document.getElementById('eventsBody');
 const emptyState = document.getElementById('emptyState');
 const statusText = document.getElementById('statusText');
@@ -55,6 +67,7 @@ let latestEvent = null;
 let latestStats = null;
 let eventMap = new Map();
 let currentReport = null;
+let flowState = loadStoredFlowState();
 
 async function loadEvents() {
   setStatus('Loading...');
@@ -319,6 +332,90 @@ function buildScopeLabel() {
   return parts.length ? parts.join(', ') : 'All captured events';
 }
 
+function startFlow() {
+  flowState = {
+    ...readFlowInputs(),
+    startTime: Date.now(),
+    endTime: null,
+    active: true,
+  };
+  saveFlowState();
+  updateFlowUi();
+  setStatus('Order flow started');
+}
+
+function stopFlow() {
+  flowState = {
+    ...flowState,
+    ...readFlowInputs(),
+    endTime: Date.now(),
+    active: false,
+  };
+  saveFlowState();
+  updateFlowUi();
+  setStatus('Order flow stopped');
+}
+
+function generateFlowReport() {
+  flowState = { ...flowState, ...readFlowInputs() };
+  saveFlowState();
+  const report = buildOrderFlowReport(allEvents, flowState);
+  currentReport = {
+    subject: report.subject,
+    body: report.body,
+    truncatedBody: report.body,
+  };
+  reportPreview.value = report.body;
+  reportMeta.textContent = `${report.matchedEvents.length} flow-window events stitched from manual fields, Quote ID, and milestone URLs.`;
+  reportPanel.hidden = false;
+  setStatus('Flow report generated');
+}
+
+function readFlowInputs() {
+  return {
+    sku: flowSku ? flowSku.value.trim() : '',
+    customer: flowCustomer ? flowCustomer.value.trim() : '',
+    address: flowAddress ? flowAddress.value.trim() : '',
+    deliveryType: flowDeliveryType ? flowDeliveryType.value.trim() : '',
+    notes: flowNotes ? flowNotes.value.trim() : '',
+  };
+}
+
+function loadStoredFlowState() {
+  try {
+    return JSON.parse(localStorage.getItem(FLOW_STORAGE_KEY)) || {};
+  } catch (_err) {
+    return {};
+  }
+}
+
+function saveFlowState() {
+  localStorage.setItem(FLOW_STORAGE_KEY, JSON.stringify(flowState));
+}
+
+function persistFlowInputs() {
+  flowState = { ...flowState, ...readFlowInputs() };
+  saveFlowState();
+  updateFlowUi();
+}
+
+function updateFlowUi() {
+  if (flowSku) flowSku.value = flowState.sku || '';
+  if (flowCustomer) flowCustomer.value = flowState.customer || '';
+  if (flowAddress) flowAddress.value = flowState.address || '';
+  if (flowDeliveryType) flowDeliveryType.value = flowState.deliveryType || '';
+  if (flowNotes) flowNotes.value = flowState.notes || '';
+  if (!flowStatus) return;
+
+  if (flowState.active && flowState.startTime) {
+    flowStatus.textContent = `Active since ${formatTimestamp(flowState.startTime)}`;
+  } else if (flowState.startTime) {
+    flowStatus.textContent = `Stopped: ${formatTimestamp(flowState.startTime)} to ${formatTimestamp(flowState.endTime || Date.now())}`;
+  } else {
+    flowStatus.textContent = 'Not started';
+  }
+}
+
 async function clearEvents() {
   if (!confirm('Clear all captured events?')) return;
   const response = await sendMessage({ type: MSG.CLEAR_EVENTS });
@@ -457,6 +554,7 @@ function downloadBlob(blob, filename) {
 const debouncedRefresh = debounce(refreshDerivedState, UI.DEBOUNCE_MS);
 
 initRenderer(eventsBody, emptyState);
+updateFlowUi();
 loadEvents();
 attachListeners();
 
@@ -473,6 +571,12 @@ function attachListeners() {
   btnOptions.addEventListener('click', openOptions);
   btnClear.addEventListener('click', clearEvents);
   btnGenerateReport.addEventListener('click', generateReport);
+  if (btnStartFlow) btnStartFlow.addEventListener('click', startFlow);
+  if (btnStopFlow) btnStopFlow.addEventListener('click', stopFlow);
+  if (btnGenerateFlow) btnGenerateFlow.addEventListener('click', generateFlowReport);
+  [flowSku, flowCustomer, flowAddress, flowDeliveryType, flowNotes]
+    .filter(Boolean)
+    .forEach((input) => input.addEventListener('change', persistFlowInputs));
   btnCopyReport.addEventListener('click', copyReport);
   btnEmailReport.addEventListener('click', emailReport);
   btnCloseReport.addEventListener('click', closeReport);

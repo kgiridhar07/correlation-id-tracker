@@ -22,6 +22,7 @@ For the full project design, architecture, data flow, and roadmap, see [`../PDD.
 - **Badge count** — toolbar badge increments when new IDs are captured and clears with stored events
 - **Interactive dashboard** — total events, unique IDs, duplicate rate, active domains, request/response split, top lists, and last-hour activity
 - **Expanded dashboard tab** — opens the popup experience in a full browser tab for deeper review
+- **Order flow capture** — stitches manual SKU/customer/address/delivery type with Quote ID and milestone correlation IDs
 - **Live popup UI** — latest-ID quick view plus search, source, method, domain, time, and duplicate filters
 - **Copy formats** — copy ID, investigation note, or JSON for each event
 - **Manual reports** — generate a clean investigation summary, copy it, or open a prefilled email draft
@@ -111,13 +112,14 @@ Firefox support uses the shared WebExtension API wrapper in `utils/browserApi.js
 2. **Click the extension icon** to open the popup dashboard.
 3. **Read the dashboard** — scan total events, unique IDs, duplicate rate, active domains, request/response split, top domains, top methods, repeated IDs, and last-hour activity.
 4. **Open expanded view** — click "Open" in the popup to launch the same dashboard in a full browser tab.
-5. **Use latest ID** — copy the newest ID or a ready-to-paste investigation note from the top panel.
-6. **Filter** — narrow by search text, source, method, domain, time range, or duplicate status.
-7. **Copy** — copy an event as ID, note, or JSON from the Actions column.
-8. **Report** — click "Report" to generate a bounded summary from the current popup filters, then copy it or open an email draft.
-9. **Export** — click "JSON" or "CSV" to download all captured events with metadata.
-10. **Configure** — click the gear button to edit URL filters, headers, page-data watchers, report recipients, retention, and max saved events.
-11. **Clear** — click the trash icon to wipe stored events and reset the badge.
+5. **Capture an order flow** — enter SKU, customer, address, and delivery type, click "Start Flow", perform the ordering steps, then click "Flow Report".
+6. **Use latest ID** — copy the newest ID or a ready-to-paste investigation note from the top panel.
+7. **Filter** — narrow by search text, source, method, domain, time range, or duplicate status.
+8. **Copy** — copy an event as ID, note, or JSON from the Actions column.
+9. **Report** — click "Report" to generate a bounded summary from the current popup filters, then copy it or open an email draft.
+10. **Export** — click "JSON" or "CSV" to download all captured events with metadata.
+11. **Configure** — click the gear button to edit URL filters, headers, page-data watchers, report recipients, retention, and max saved events.
+12. **Clear** — click the trash icon to wipe stored events and reset the badge.
 
 ---
 
@@ -170,6 +172,31 @@ The popup report workflow is intentionally manual and reviewable:
 Reports summarize large captures instead of dumping every row. They include totals, request/response/page-data counts, top domains, top methods, repeated values, recent page-data values, and a latest-event sample. Use JSON/CSV export when the recipient needs the full raw dataset.
 
 Email sending uses `mailto:` and opens a draft in the user's configured email client. The extension does not store email passwords, API keys, SMTP credentials, or email provider secrets.
+
+### Order Flow Capture
+
+Order Flow Capture is designed for SKU-to-delivery troubleshooting. Enter the business context manually, then let the extension stitch captured values during the active flow window.
+
+Manual fields:
+
+```text
+SKU
+Customer
+Address
+Delivery Type
+Notes
+```
+
+Automatic values:
+
+```text
+Quote ID from [data-testid="order-number"]
+Sourcing Options correlation IDs from URLs containing sourcing-options or sourcing
+Capacity correlation IDs from URLs containing capacity
+Reserve Delivery correlation IDs from URLs containing reserve-delivery or reserve
+```
+
+The flow report combines manual context, the DOM Quote ID, and matching network header captures into one stitched timeline.
 
 ---
 
