@@ -15,13 +15,14 @@ import { ORDER_FLOW_MILESTONES } from './constants.js';
 export function buildOrderFlowReport(events, flowState = {}, now = Date.now(), milestones = ORDER_FLOW_MILESTONES) {
   const selectedEvents = filterEventsForFlow(events, flowState, now);
   const quoteId = findQuoteId(selectedEvents);
+  const businessContext = buildBusinessContext(flowState, selectedEvents);
   const normalizedMilestones = normalizeOrderFlowMilestones(milestones);
   const milestoneMatches = normalizedMilestones.map((milestone) => ({
     ...milestone,
     events: findMilestoneEvents(selectedEvents, milestone.patterns),
   }));
   const subjectParts = ['Order Flow Report'];
-  if (flowState.sku) subjectParts.push(`SKU ${flowState.sku}`);
+  if (businessContext.sku) subjectParts.push(`SKU ${businessContext.sku}`);
   if (quoteId) subjectParts.push(`Quote ${quoteId}`);
 
   const lines = [];
@@ -32,10 +33,10 @@ export function buildOrderFlowReport(events, flowState = {}, now = Date.now(), m
   lines.push('');
   lines.push('Business Context');
   lines.push('----------------');
-  lines.push(`SKU: ${flowState.sku || '-'}`);
-  lines.push(`Customer: ${flowState.customer || '-'}`);
-  lines.push(`Address: ${flowState.address || '-'}`);
-  lines.push(`Delivery Type: ${flowState.deliveryType || '-'}`);
+  lines.push(`SKU: ${businessContext.sku || '-'}`);
+  lines.push(`Customer: ${businessContext.customer || '-'}`);
+  lines.push(`Address: ${businessContext.address || '-'}`);
+  lines.push(`Delivery Type: ${businessContext.deliveryType || '-'}`);
   lines.push(`Quote ID: ${quoteId || '-'}`);
   if (flowState.notes) lines.push(`Notes: ${flowState.notes}`);
   lines.push('');
@@ -110,12 +111,28 @@ function filterEventsForFlow(events, flowState, now) {
 }
 
 function findQuoteId(events) {
-  const quoteEvent = events.find((event) => {
-    const label = String(event.fieldLabel || '').toLowerCase();
-    const path = String(event.fieldPath || '').toLowerCase();
-    return event.sourceType === 'page-data' && (label.includes('quote') || path.includes('order-number'));
+  return findPageDataValue(events, ['quote'], ['order-number']);
+}
+
+function buildBusinessContext(flowState, events) {
+  return {
+    sku: flowState.sku || findPageDataValue(events, ['sku'], ['sku-number']),
+    customer: flowState.customer || findPageDataValue(events, ['customer'], ['customer-card__name']),
+    address: flowState.address || findPageDataValue(events, ['address'], ['delivery address']),
+    deliveryType: flowState.deliveryType || findPageDataValue(events, ['delivery type', 'delivery options'], ['delivery options', 'delivery-type']),
+  };
+}
+
+function findPageDataValue(events, labelMatches, pathMatches) {
+  const event = events.find((item) => {
+    const label = String(item.fieldLabel || '').toLowerCase();
+    const path = String(item.fieldPath || '').toLowerCase();
+    return item.sourceType === 'page-data' && (
+      labelMatches.some((match) => label.includes(match)) ||
+      pathMatches.some((match) => path.includes(match))
+    );
   });
-  return quoteEvent ? quoteEvent.correlationId : '';
+  return event ? event.correlationId : '';
 }
 
 function findMilestoneEvents(events, patterns) {

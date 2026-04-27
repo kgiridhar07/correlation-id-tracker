@@ -191,12 +191,16 @@ Automatic values:
 
 ```text
 Quote ID from [data-testid="order-number"]
+SKU from [data-testid="product-description__sku-number"]
+Customer from .customer-card__name .pal--type-style-05
+Address from the fulfillment row labeled DELIVERY ADDRESS
+Delivery Type from the fulfillment row labeled DELIVERY OPTIONS
 Sourcing Options correlation IDs from URLs containing sourcing-options or sourcing
 Capacity correlation IDs from URLs containing capacity
 Reserve Delivery correlation IDs from URLs containing reserve-delivery or reserve
 ```
 
-The flow report combines manual context, the DOM Quote ID, and matching network header captures into one stitched timeline.
+The flow report combines manual context, captured DOM values, and matching network header captures into one stitched timeline. Manual fields still override captured page values when typed.
 
 Milestone URL matching is configurable in Options. Use one line per milestone:
 

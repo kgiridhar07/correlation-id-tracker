@@ -365,6 +365,10 @@ Manual fields:
 Automatic values:
 
 - Quote ID from `[data-testid="order-number"]`.
+- SKU from `[data-testid="product-description__sku-number"]`.
+- Customer from `.customer-card__name .pal--type-style-05`.
+- Address from the fulfillment row labeled `DELIVERY ADDRESS`.
+- Delivery Type from the fulfillment row labeled `DELIVERY OPTIONS`.
 - Sourcing Options correlation IDs from URLs containing `sourcing-options`, `sourcing options`, or `sourcing`.
 - Capacity correlation IDs from URLs containing `capacity`.
 - Reserve Delivery correlation IDs from URLs containing `reserve-delivery`, `reserve delivery`, or `reserve`.

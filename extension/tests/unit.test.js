@@ -165,6 +165,21 @@ test('stitches an order flow report with configured milestone paths', () => {
   assertEqual(report.body.includes('custom-reserve'), true);
 });
 
+test('fills order flow business context from captured page data', () => {
+  const now = 1000000;
+  const events = [
+    { correlationId: '1003236000', timestamp: now - 1000, sourceType: 'page-data', fieldLabel: 'SKU', fieldPath: 'dom:[data-testid="product-description__sku-number"]', method: 'PAGE', url: 'https://orderup.example.com/product' },
+    { correlationId: 'Rajesh Kumar M1', timestamp: now - 2000, sourceType: 'page-data', fieldLabel: 'Customer', fieldPath: 'dom:.customer-card__name .pal--type-style-05', method: 'PAGE', url: 'https://orderup.example.com/customer' },
+    { correlationId: '2422 Cumberland SE unit 555 Atlanta, GA 30339 (475) 239-8111', timestamp: now - 3000, sourceType: 'page-data', fieldLabel: 'Address', fieldPath: 'dom:[data-testid="fulfillment-steps"]|label:delivery address|value:.description', method: 'PAGE', url: 'https://orderup.example.com/fulfillment' },
+    { correlationId: 'Threshold Flat 1 Pallets', timestamp: now - 4000, sourceType: 'page-data', fieldLabel: 'Delivery Type', fieldPath: 'dom:[data-testid="fulfillment-steps"]|label:delivery options|value:.description', method: 'PAGE', url: 'https://orderup.example.com/fulfillment' },
+  ];
+  const report = buildOrderFlowReport(events, { startTime: now - 5000, endTime: now }, now);
+  assertEqual(report.body.includes('SKU: 1003236000'), true);
+  assertEqual(report.body.includes('Customer: Rajesh Kumar M1'), true);
+  assertEqual(report.body.includes('Address: 2422 Cumberland SE unit 555 Atlanta, GA 30339 (475) 239-8111'), true);
+  assertEqual(report.body.includes('Delivery Type: Threshold Flat 1 Pallets'), true);
+});
+
 function test(name, fn) {
   try {
     fn();

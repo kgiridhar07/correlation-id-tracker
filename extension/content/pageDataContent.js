@@ -6,6 +6,22 @@
   const DEFAULT_DURATION_SECONDS = 30;
   const DOM_WATCHERS = Object.freeze([
     { label: 'Quote ID', selector: '[data-testid="order-number"]' },
+    { label: 'SKU', selector: '[data-testid="product-description__sku-number"]' },
+    { label: 'Customer', selector: '.customer-card__name .pal--type-style-05' },
+    {
+      label: 'Address',
+      selector: '[data-testid="fulfillment-steps"]',
+      labelSelector: '.label',
+      labelText: 'delivery address',
+      valueSelector: '.description',
+    },
+    {
+      label: 'Delivery Type',
+      selector: '[data-testid="fulfillment-steps"]',
+      labelSelector: '.label',
+      labelText: 'delivery options',
+      valueSelector: '.description',
+    },
   ]);
 
   const extensionApi = globalThis.browser && globalThis.browser.runtime ? globalThis.browser : chrome;
@@ -79,11 +95,10 @@
 
   async function scanDomWatchers() {
     for (const watcher of DOM_WATCHERS) {
-      const element = document.querySelector(watcher.selector);
-      const value = element ? String(element.textContent || '').replace(/\u00a0/g, ' ').trim() : '';
+      const value = readDomWatcherValue(watcher);
       if (!value) continue;
 
-      const path = `dom:${watcher.selector}`;
+      const path = buildDomWatcherPath(watcher);
       const key = `${location.href}|${path}|${value}`;
       if (lastValues.get(path) === key) continue;
       lastValues.set(path, key);
@@ -100,6 +115,35 @@
         },
       });
     }
+  }
+
+  function readDomWatcherValue(watcher) {
+    if (watcher.labelText && watcher.valueSelector) {
+      const containers = document.querySelectorAll(watcher.selector);
+      for (const container of containers) {
+        const label = container.querySelector(watcher.labelSelector || '.label');
+        const labelText = normalizeText(label ? label.textContent : '');
+        if (!labelText.toLowerCase().includes(watcher.labelText)) continue;
+        const valueElement = container.querySelector(watcher.valueSelector);
+        const value = normalizeText(valueElement ? valueElement.textContent : '');
+        if (value) return value;
+      }
+      return '';
+    }
+
+    const element = document.querySelector(watcher.selector);
+    return normalizeText(element ? element.textContent : '');
+  }
+
+  function buildDomWatcherPath(watcher) {
+    if (watcher.labelText && watcher.valueSelector) {
+      return `dom:${watcher.selector}|label:${watcher.labelText}|value:${watcher.valueSelector}`;
+    }
+    return `dom:${watcher.selector}`;
+  }
+
+  function normalizeText(value) {
+    return String(value || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   function checkUrlChange() {
