@@ -133,7 +133,7 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 | `correlationHeaders` | `['x-correlation-id', ...]` | Header names to extract |
 | `pageDataWatchers` | `[]` | Page global paths to capture |
 | `pageDataPollMs` | `1,000` | Page-data polling interval |
-| `pageDataDurationSeconds` | `30` | How long to poll after page load |
+| `pageDataDurationSeconds` | `120` | How long to poll after page load |
 | `reportRecipients` | `[]` | Email recipients used by Send Email Draft |
 | `maxEvents` | `10,000` | Max events in IndexedDB |
 | `retentionHours` | `24` | Event retention window |

@@ -3,7 +3,7 @@
   const PAGE_SOURCE = 'CID_TRACKER_PAGE';
   const BRIDGE_ID = 'cid-tracker-page-data-bridge';
   const DEFAULT_POLL_MS = 1000;
-  const DEFAULT_DURATION_SECONDS = 30;
+  const DEFAULT_DURATION_SECONDS = 120;
   const DOM_WATCHERS = Object.freeze([
     { label: 'Quote ID', selector: '[data-testid="order-number"]' },
     { label: 'SKU', selector: '[data-testid="product-description__sku-number"]' },
@@ -54,7 +54,8 @@
     scanOnce();
 
     activeTimer = setInterval(scanOnce, activeConfig.pageDataPollMs || DEFAULT_POLL_MS);
-    stopTimer = setTimeout(stopCapture, (activeConfig.pageDataDurationSeconds || DEFAULT_DURATION_SECONDS) * 1000);
+    const captureSeconds = Math.max(activeConfig.pageDataDurationSeconds || DEFAULT_DURATION_SECONDS, DEFAULT_DURATION_SECONDS);
+    stopTimer = setTimeout(stopCapture, captureSeconds * 1000);
   }
 
   function stopCapture() {

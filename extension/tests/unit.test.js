@@ -42,7 +42,7 @@ test('normalizes config and clamps storage limits', () => {
   assertDeepEqual(config.pageDataWatchers, [{ label: 'Cart ID', path: 'digitalData.cart.cartId' }]);
   assertDeepEqual(config.orderFlowMilestones.map((milestone) => milestone.patterns[0]), ['/v1/source/options', '/v1/capacity/check', '/v1/delivery/reserve']);
   assertEqual(config.pageDataPollMs, 250);
-  assertEqual(config.pageDataDurationSeconds, 120);
+  assertEqual(config.pageDataDurationSeconds, 300);
   assertDeepEqual(config.reportRecipients, ['sre-team@example.com', 'manager@example.com']);
   assertEqual(config.maxEvents, 100000);
   assertEqual(config.retentionHours, 720);
@@ -163,6 +163,28 @@ test('stitches an order flow report with configured milestone paths', () => {
   assertEqual(report.body.includes('custom-sourcing'), true);
   assertEqual(report.body.includes('custom-capacity'), true);
   assertEqual(report.body.includes('custom-reserve'), true);
+});
+
+test('uses the most specific milestone pattern for overlapping URLs', () => {
+  const now = 1000000;
+  const milestones = normalizeOrderFlowMilestones([
+    'Sourcing Options | sourcingoptions',
+    'Capacity | sourcingoptions?calltype=capacity',
+    'Reserve Delivery | reserve-delivery',
+  ]);
+  const events = [
+    { correlationId: 'capacity-only', timestamp: now - 1000, sourceType: 'response-header', method: 'GET', url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { correlationId: 'sourcing-only', timestamp: now - 2000, sourceType: 'response-header', method: 'GET', url: 'https://api.example.com/sourcingOptions' },
+  ];
+  const report = buildOrderFlowReport(events, { startTime: now - 5000, endTime: now }, now, milestones);
+  const sourcingIndex = report.body.indexOf('Sourcing Options:');
+  const capacityIndex = report.body.indexOf('Capacity:');
+  const reserveIndex = report.body.indexOf('Reserve Delivery:');
+  const sourcingSection = report.body.slice(sourcingIndex, capacityIndex);
+  const capacitySection = report.body.slice(capacityIndex, reserveIndex);
+  assertEqual(sourcingSection.includes('sourcing-only'), true);
+  assertEqual(sourcingSection.includes('capacity-only'), false);
+  assertEqual(capacitySection.includes('capacity-only'), true);
 });
 
 test('fills order flow business context from captured page data', () => {

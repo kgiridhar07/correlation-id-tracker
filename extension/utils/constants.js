@@ -70,7 +70,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   correlationHeaders: CORRELATION_HEADERS,
   pageDataWatchers: [],
   pageDataPollMs: 1000,
-  pageDataDurationSeconds: 30,
+  pageDataDurationSeconds: 120,
   orderFlowMilestones: ORDER_FLOW_MILESTONES,
   reportRecipients: [],
   maxEvents: STORAGE_LIMITS.MAX_EVENTS,

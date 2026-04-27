@@ -17,10 +17,7 @@ export function buildOrderFlowReport(events, flowState = {}, now = Date.now(), m
   const quoteId = findQuoteId(selectedEvents);
   const businessContext = buildBusinessContext(flowState, selectedEvents);
   const normalizedMilestones = normalizeOrderFlowMilestones(milestones);
-  const milestoneMatches = normalizedMilestones.map((milestone) => ({
-    ...milestone,
-    events: findMilestoneEvents(selectedEvents, milestone.patterns),
-  }));
+  const milestoneMatches = assignMilestoneEvents(selectedEvents, normalizedMilestones);
   const subjectParts = ['Order Flow Report'];
   if (businessContext.sku) subjectParts.push(`SKU ${businessContext.sku}`);
   if (quoteId) subjectParts.push(`Quote ${quoteId}`);
@@ -49,7 +46,7 @@ export function buildOrderFlowReport(events, flowState = {}, now = Date.now(), m
       lines.push('  - Not captured yet');
       continue;
     }
-    for (const event of milestone.events.slice(0, 3)) {
+    for (const event of milestone.events.slice(0, 1)) {
       lines.push(`  - ${event.correlationId}`);
       lines.push(`    Time: ${formatTime(event.timestamp)}`);
       lines.push(`    Source: ${event.sourceType || '-'}`);
@@ -124,7 +121,7 @@ function buildBusinessContext(flowState, events) {
 }
 
 function findPageDataValue(events, labelMatches, pathMatches) {
-  const event = events.find((item) => {
+  const event = [...events].reverse().find((item) => {
     const label = String(item.fieldLabel || '').toLowerCase();
     const path = String(item.fieldPath || '').toLowerCase();
     return item.sourceType === 'page-data' && (
@@ -135,14 +132,41 @@ function findPageDataValue(events, labelMatches, pathMatches) {
   return event ? event.correlationId : '';
 }
 
-function findMilestoneEvents(events, patterns) {
+function assignMilestoneEvents(events, milestones) {
+  const matchesByKey = new Map(milestones.map((milestone) => [milestone.key, []]));
+  for (const event of events) {
+    if (event.sourceType === 'page-data') continue;
+    const match = findBestMilestoneMatch(event, milestones);
+    if (!match) continue;
+    matchesByKey.get(match.key).push(event);
+  }
+
+  return milestones.map((milestone) => ({
+    ...milestone,
+    events: dedupeMilestoneEvents(matchesByKey.get(milestone.key) || []),
+  }));
+}
+
+function findBestMilestoneMatch(event, milestones) {
+  let bestMatch = null;
+  for (const milestone of milestones) {
+    const url = String(event.url || '').toLowerCase();
+    const matchedPattern = milestone.patterns
+      .filter((pattern) => url.includes(pattern))
+      .sort((a, b) => b.length - a.length)[0];
+    if (!matchedPattern) continue;
+    if (!bestMatch || matchedPattern.length > bestMatch.pattern.length) {
+      bestMatch = { key: milestone.key, pattern: matchedPattern };
+    }
+  }
+  return bestMatch;
+}
+
+function dedupeMilestoneEvents(events) {
   const seen = new Set();
   const matches = [];
-  for (const event of events) {
-    const url = String(event.url || '').toLowerCase();
-    if (!patterns.some((pattern) => url.includes(pattern))) continue;
-    if (event.sourceType === 'page-data') continue;
-    const key = `${event.correlationId}|${event.sourceType}|${event.url}`;
+  for (const event of [...events].sort((a, b) => b.timestamp - a.timestamp)) {
+    const key = `${event.correlationId}|${event.url}`;
     if (seen.has(key)) continue;
     seen.add(key);
     matches.push(event);
