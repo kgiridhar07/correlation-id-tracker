@@ -9,13 +9,6 @@ import { normalizePageDataWatchers } from './pageDataUtils.js';
 
 let activeConfig = { ...DEFAULT_CONFIG };
 
-const LEGACY_DEFAULT_URL_FILTERS = Object.freeze(['orderup', 'usom', '/api/']);
-const LEGACY_DEFAULT_MILESTONE_PATTERNS = Object.freeze([
-  ['sourcing-options', 'sourcing options', 'sourcing'],
-  ['capacity'],
-  ['reserve-delivery', 'reserve delivery', 'reserve'],
-]);
-
 function normalizeStringList(value, fallback) {
   const items = Array.isArray(value) ? value : String(value || '').split('\n');
   const cleaned = items
@@ -42,34 +35,18 @@ export function normalizeConfig(value = {}) {
   const retentionHours = Number.parseFloat(value.retentionHours);
   const pageDataPollMs = Number.parseInt(value.pageDataPollMs, 10);
   const pageDataDurationSeconds = Number.parseInt(value.pageDataDurationSeconds, 10);
-  const urlFilters = normalizeStringList(value.urlFilters, DEFAULT_CONFIG.urlFilters);
-  const orderFlowMilestones = normalizeOrderFlowMilestones(value.orderFlowMilestones);
 
   return {
-    urlFilters: isLegacyDefaultUrlFilters(urlFilters) ? [...DEFAULT_CONFIG.urlFilters] : urlFilters,
+    urlFilters: normalizeStringList(value.urlFilters, DEFAULT_CONFIG.urlFilters),
     correlationHeaders: normalizeStringList(value.correlationHeaders, DEFAULT_CONFIG.correlationHeaders),
     pageDataWatchers: normalizePageDataWatchers(value.pageDataWatchers),
-    orderFlowMilestones: isLegacyDefaultMilestones(orderFlowMilestones) ? DEFAULT_CONFIG.orderFlowMilestones.map((milestone) => ({ ...milestone, patterns: [...milestone.patterns] })) : orderFlowMilestones,
+    orderFlowMilestones: normalizeOrderFlowMilestones(value.orderFlowMilestones),
     pageDataPollMs: Number.isFinite(pageDataPollMs) ? clamp(pageDataPollMs, 250, 10000) : DEFAULT_CONFIG.pageDataPollMs,
     pageDataDurationSeconds: Number.isFinite(pageDataDurationSeconds) ? clamp(pageDataDurationSeconds, 1, 300) : DEFAULT_CONFIG.pageDataDurationSeconds,
     reportRecipients: normalizeEmailList(value.reportRecipients),
     maxEvents: Number.isFinite(maxEvents) && maxEvents > 0 ? Math.min(maxEvents, 100000) : DEFAULT_CONFIG.maxEvents,
     retentionHours: Number.isFinite(retentionHours) && retentionHours > 0 ? Math.min(retentionHours, 720) : DEFAULT_CONFIG.retentionHours,
   };
-}
-
-function isLegacyDefaultUrlFilters(filters) {
-  return listsMatch(filters, LEGACY_DEFAULT_URL_FILTERS);
-}
-
-function isLegacyDefaultMilestones(milestones) {
-  if (!Array.isArray(milestones) || milestones.length !== LEGACY_DEFAULT_MILESTONE_PATTERNS.length) return false;
-  return milestones.every((milestone, index) => listsMatch(milestone.patterns || [], LEGACY_DEFAULT_MILESTONE_PATTERNS[index]));
-}
-
-function listsMatch(left, right) {
-  if (!Array.isArray(left) || left.length !== right.length) return false;
-  return left.every((item, index) => String(item).toLowerCase() === right[index]);
 }
 
 function clamp(value, min, max) {

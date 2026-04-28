@@ -51,19 +51,6 @@ test('normalizes config and clamps storage limits', () => {
   assertEqual(config.retentionHours, 720);
 });
 
-test('migrates legacy default URL filters and milestones', () => {
-  const config = normalizeConfig({
-    urlFilters: ['orderup', 'usom', '/api/'],
-    orderFlowMilestones: [
-      { label: 'Sourcing Options', patterns: ['sourcing-options', 'sourcing options', 'sourcing'] },
-      { label: 'Capacity', patterns: ['capacity'] },
-      { label: 'Reserve Delivery', patterns: ['reserve-delivery', 'reserve delivery', 'reserve'] },
-    ],
-  });
-  assertDeepEqual(config.urlFilters, []);
-  assertDeepEqual(config.orderFlowMilestones.map((milestone) => milestone.patterns[0]), ['sourcingoptions', 'sourcingoptions?calltype=capacity', 'reservedelivery']);
-});
-
 test('parses configurable page data watcher paths', () => {
   const watchers = normalizePageDataWatchers([
     'Cart ID | digitalData.cart.cartId',
