@@ -23,8 +23,8 @@ test('extracts configured correlation headers case-insensitively', () => {
   assertEqual(ids[1].value, 'order-track-123');
 });
 
-test('matches default URL filters', () => {
-  assertEqual(isRelevantUrl('https://example.com/api/orders'), true);
+test('starts with empty URL filters until configured', () => {
+  assertEqual(isRelevantUrl('https://example.com/api/orders'), false);
   assertEqual(isRelevantUrl('https://example.com/static/logo.png'), false);
 });
 
@@ -49,6 +49,19 @@ test('normalizes config and clamps storage limits', () => {
   assertDeepEqual(config.reportRecipients, ['sre-team@example.com', 'manager@example.com']);
   assertEqual(config.maxEvents, 100000);
   assertEqual(config.retentionHours, 720);
+});
+
+test('migrates legacy default URL filters and milestones', () => {
+  const config = normalizeConfig({
+    urlFilters: ['orderup', 'usom', '/api/'],
+    orderFlowMilestones: [
+      { label: 'Sourcing Options', patterns: ['sourcing-options', 'sourcing options', 'sourcing'] },
+      { label: 'Capacity', patterns: ['capacity'] },
+      { label: 'Reserve Delivery', patterns: ['reserve-delivery', 'reserve delivery', 'reserve'] },
+    ],
+  });
+  assertDeepEqual(config.urlFilters, []);
+  assertDeepEqual(config.orderFlowMilestones.map((milestone) => milestone.patterns[0]), ['sourcingoptions', 'sourcingoptions?calltype=capacity', 'reservedelivery']);
 });
 
 test('parses configurable page data watcher paths', () => {
@@ -129,9 +142,9 @@ test('builds a bounded investigation report', () => {
 test('stitches an order flow report from manual fields and milestones', () => {
   const now = 1000000;
   const events = [
-    { correlationId: 'reserve-corr', timestamp: now - 1000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/reserve-delivery' },
-    { correlationId: 'capacity-corr', timestamp: now - 2000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/capacity' },
-    { correlationId: 'sourcing-corr', timestamp: now - 3000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/sourcing-options' },
+    { correlationId: 'reserve-corr', timestamp: now - 1000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/reserveDelivery' },
+    { correlationId: 'capacity-corr', timestamp: now - 2000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { correlationId: 'sourcing-corr', timestamp: now - 3000, sourceType: 'response-header', method: 'POST', url: 'https://api.example.com/sourcingOptions' },
     { correlationId: 'H9179-307073', timestamp: now - 4000, sourceType: 'page-data', fieldLabel: 'Quote ID', fieldPath: 'dom:[data-testid="order-number"]', method: 'PAGE', url: 'https://orderup.example.com/quote' },
   ];
   const report = buildOrderFlowReport(events, {

@@ -251,14 +251,14 @@ For network header captures, `headerName` stores the matched request or response
 
 ### URL Filters
 
-URL filters are simple case-insensitive substring matches. A request or page must match at least one filter before it is considered relevant.
+URL filters are simple case-insensitive substring matches. They default to empty so users explicitly choose which URLs are relevant. A network request must match at least one configured filter before it is captured.
 
 Example:
 
 ```text
-abc.com
-/api/
-checkout
+orderup
+usom
+sourcingoptions
 ```
 
 ### Header Names
@@ -373,9 +373,9 @@ Built-in DOM values are scanned from the order page independently of API URL fil
 Milestone URL patterns are user-configurable in Options with this format:
 
 ```text
-Sourcing Options | /your/sourcing/path
-Capacity | /your/capacity/path
-Reserve Delivery | /your/reserve/path
+Sourcing Options | sourcingoptions
+Capacity | sourcingoptions?calltype=capacity
+Reserve Delivery | reservedelivery
 ```
 
 The normal workflow does not require Start/Stop controls. Users should clear old events before a new order journey when they want a clean report.

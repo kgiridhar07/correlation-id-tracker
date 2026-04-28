@@ -15,9 +15,6 @@ export const CORRELATION_HEADERS = Object.freeze([
 
 /** URL patterns to filter relevant traffic. Only requests matching at least one pattern are captured. */
 export const URL_FILTERS = Object.freeze([
-  'orderup',
-  'usom',
-  '/api/',
 ]);
 
 /** Default URL patterns used to stitch order-flow milestone correlation IDs. */
@@ -25,17 +22,17 @@ export const ORDER_FLOW_MILESTONES = Object.freeze([
   {
     key: 'sourcingOptions',
     label: 'Sourcing Options',
-    patterns: ['sourcing-options', 'sourcing options', 'sourcing'],
+    patterns: ['sourcingoptions'],
   },
   {
     key: 'capacity',
     label: 'Capacity',
-    patterns: ['capacity'],
+    patterns: ['sourcingoptions?calltype=capacity'],
   },
   {
     key: 'reserveDelivery',
     label: 'Reserve Delivery',
-    patterns: ['reserve-delivery', 'reserve delivery', 'reserve'],
+    patterns: ['reservedelivery'],
   },
 ]);
 

@@ -129,7 +129,7 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `urlFilters` | `['orderup', 'usom', '/api/']` | URL substrings to match |
+| `urlFilters` | `[]` | URL substrings to match; configure these in Options before capturing network headers |
 | `correlationHeaders` | `['x-correlation-id', 'order-tracking-id', ...]` | Header names to extract |
 | `pageDataWatchers` | `[]` | Page global paths to capture |
 | `pageDataPollMs` | `1,000` | Page-data polling interval |
@@ -194,12 +194,12 @@ The built-in DOM values above are scanned from the order page even when URL filt
 
 The Order Flow table combines captured DOM values and matching network header captures on the same line. For each milestone request, `order-tracking-id` is used as the stitch key and `usom-correlationid` is used as the milestone correlation ID when present.
 
-Milestone URL matching is configurable in Options. Use one line per milestone:
+Milestone URL matching is configurable in Options. The default milestone patterns are:
 
 ```text
-Sourcing Options | /your/sourcing/path
-Capacity | /your/capacity/path
-Reserve Delivery | /your/reserve/path
+Sourcing Options | sourcingoptions
+Capacity | sourcingoptions?calltype=capacity
+Reserve Delivery | reservedelivery
 ```
 
 You can put multiple patterns on a line with semicolons:
