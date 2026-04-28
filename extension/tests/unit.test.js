@@ -5,11 +5,13 @@ import { isRelevantUrl } from '../utils/helpers.js';
 import { buildOrderFlowReport, buildOrderFlowRows, normalizeOrderFlowMilestones } from '../utils/flowUtils.js';
 import { normalizePageDataWatchers, parseDataPath, serializePageValue } from '../utils/pageDataUtils.js';
 import { buildInvestigationReport } from '../utils/reportUtils.js';
+import { clearAllEvents, getAllEvents, queueEvent } from '../background/storageManager.js';
 
 const results = document.getElementById('results');
 const summary = document.getElementById('summary');
 let passed = 0;
 let failed = 0;
+const testPromises = [];
 
 test('extracts configured correlation headers case-insensitively', () => {
   const ids = extractCorrelationIds([
@@ -296,6 +298,48 @@ test('keeps previous order flow rows when another flow is captured', () => {
   assertEqual(rows[1].capacity.correlationId, 'CAP-1');
 });
 
+test('persists captured order flow events without dropping previous rows', async () => {
+  await clearAllEvents();
+  const milestones = normalizeOrderFlowMilestones([
+    'Sourcing Options | sourcingOptions',
+    'Capacity | callType=capacity',
+    'Reserve Delivery | reserveDelivery',
+  ]);
+  const events = [
+    { requestId: 'stored-a1', correlationId: 'TRACK-STORED-1', headerName: 'order-tracking-id', timestamp: 10000, sourceType: 'request-header', method: 'GET', tabId: 12, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'stored-a1', correlationId: 'SRC-STORED-1', headerName: 'usom-correlationid', timestamp: 10001, sourceType: 'request-header', method: 'GET', tabId: 12, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'stored-a2', correlationId: 'TRACK-STORED-1', headerName: 'order-tracking-id', timestamp: 10100, sourceType: 'request-header', method: 'GET', tabId: 12, url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { requestId: 'stored-a2', correlationId: 'CAP-STORED-1', headerName: 'usom-correlationid', timestamp: 10101, sourceType: 'request-header', method: 'GET', tabId: 12, url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { requestId: 'stored-page-a1', correlationId: 'SKU-STORED-1', timestamp: 10200, sourceType: 'page-data', fieldLabel: 'SKU', fieldPath: 'dom:[data-testid="product-description__sku-number"]', method: 'PAGE', tabId: 12, url: 'https://orderup.example.com/product/1' },
+    { requestId: 'stored-page-a2', correlationId: 'QUOTE-STORED-1', timestamp: 10210, sourceType: 'page-data', fieldLabel: 'Quote ID', fieldPath: 'dom:[data-testid="order-number"]', method: 'PAGE', tabId: 12, url: 'https://orderup.example.com/quote/1' },
+    { requestId: 'stored-b1', correlationId: 'TRACK-STORED-2', headerName: 'order-tracking-id', timestamp: 20000, sourceType: 'request-header', method: 'GET', tabId: 12, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'stored-b1', correlationId: 'SRC-STORED-2', headerName: 'usom-correlationid', timestamp: 20001, sourceType: 'request-header', method: 'GET', tabId: 12, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'stored-b2', correlationId: 'TRACK-STORED-2', headerName: 'order-tracking-id', timestamp: 20100, sourceType: 'request-header', method: 'GET', tabId: 12, url: 'https://api.example.com/reserveDelivery' },
+    { requestId: 'stored-b2', correlationId: 'RES-STORED-2', headerName: 'usom-correlationid', timestamp: 20101, sourceType: 'request-header', method: 'GET', tabId: 12, url: 'https://api.example.com/reserveDelivery' },
+    { requestId: 'stored-page-b1', correlationId: 'SKU-STORED-2', timestamp: 20200, sourceType: 'page-data', fieldLabel: 'SKU', fieldPath: 'dom:[data-testid="product-description__sku-number"]', method: 'PAGE', tabId: 12, url: 'https://orderup.example.com/product/2' },
+    { requestId: 'stored-page-b2', correlationId: 'QUOTE-STORED-2', timestamp: 20210, sourceType: 'page-data', fieldLabel: 'Quote ID', fieldPath: 'dom:[data-testid="order-number"]', method: 'PAGE', tabId: 12, url: 'https://orderup.example.com/quote/2' },
+  ];
+
+  for (const event of events) {
+    await queueEvent(event);
+  }
+
+  const storedEvents = await getAllEvents();
+  const rows = buildOrderFlowRows(storedEvents, {}, milestones);
+  assertEqual(storedEvents.length, events.length);
+  assertEqual(rows.length, 2);
+  assertEqual(rows[0].orderTrackingId, 'TRACK-STORED-2');
+  assertEqual(rows[0].sku, 'SKU-STORED-2');
+  assertEqual(rows[0].quoteId, 'QUOTE-STORED-2');
+  assertEqual(rows[0].sourcingOptions.correlationId, 'SRC-STORED-2');
+  assertEqual(rows[0].reserveDelivery.correlationId, 'RES-STORED-2');
+  assertEqual(rows[1].orderTrackingId, 'TRACK-STORED-1');
+  assertEqual(rows[1].sku, 'SKU-STORED-1');
+  assertEqual(rows[1].quoteId, 'QUOTE-STORED-1');
+  assertEqual(rows[1].sourcingOptions.correlationId, 'SRC-STORED-1');
+  assertEqual(rows[1].capacity.correlationId, 'CAP-STORED-1');
+});
+
 test('fills order flow business context from captured page data', () => {
   const now = 1000000;
   const events = [
@@ -312,14 +356,27 @@ test('fills order flow business context from captured page data', () => {
 });
 
 function test(name, fn) {
-  try {
-    fn();
-    passed++;
-    appendResult(name, true);
-  } catch (err) {
-    failed++;
-    appendResult(`${name}: ${err.message}`, false);
-  }
+  const promise = Promise.resolve()
+    .then(fn)
+    .then(() => {
+      passed++;
+      appendResult(name, true);
+    })
+    .catch((err) => {
+      failed++;
+      appendResult(`${name}: ${err.message}`, false);
+    })
+    .finally(updateSummary);
+  testPromises.push(promise);
+}
+
+Promise.allSettled(testPromises).then(() => {
+  updateSummary();
+  document.body.dataset.testsDone = 'true';
+  window.__correlationTrackerTests = { passed, failed };
+});
+
+function updateSummary() {
   summary.textContent = `${passed} passed, ${failed} failed`;
 }
 
