@@ -250,12 +250,13 @@ main {
 .flow-table {
   width: 100%;
   min-width: 1200px;
+  table-layout: auto;
   border-collapse: collapse;
 }
 
 .flow-table th,
 .flow-table td {
-  padding: 6px 8px;
+  padding: 8px 10px;
   border-bottom: 1px solid #302d24;
   text-align: left;
   vertical-align: top;
@@ -267,16 +268,55 @@ main {
   background: #222018;
   font-weight: 600;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .flow-table td {
   color: #e0e0e0;
   max-width: 180px;
   overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.flow-table tbody tr:nth-child(even) {
+  background: #1b1b1b;
+}
+
+.flow-table tbody tr:hover {
+  background: #28251d;
+}
+
+.flow-table .flow-time {
+  min-width: 150px;
+  color: #c7d8e4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.flow-table .flow-code,
+.flow-table .flow-sku {
+  font-family: Consolas, 'Courier New', monospace;
+  color: #dcdcaa;
+}
+
+.flow-table .flow-corr {
+  max-width: 220px;
+}
+
+.flow-table .flow-text {
+  min-width: 120px;
+}
+
+.flow-table .flow-wide {
+  min-width: 220px;
+  max-width: 320px;
 }
 
 .flow-table .flow-missing {
   color: #777;
+  text-align: center;
 }
 
 .flow-empty {

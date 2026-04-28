@@ -146,20 +146,20 @@ function renderOrderFlowRows() {
   for (const row of currentOrderFlowRows) {
     const tableRow = document.createElement('tr');
     [
-      formatFlowTimestamp(row.lastUpdated),
-      row.orderTrackingId,
-      row.quoteId,
-      row.sku,
-      row.customer,
-      row.address,
-      row.deliveryType,
-      row.sourcingOptions && row.sourcingOptions.correlationId,
-      row.capacity && row.capacity.correlationId,
-      row.reserveDelivery && row.reserveDelivery.correlationId,
-    ].forEach((value) => {
+      { value: formatFlowTimestamp(row.lastUpdated), className: 'flow-time' },
+      { value: row.orderTrackingId, className: 'flow-code' },
+      { value: row.quoteId, className: 'flow-code' },
+      { value: row.sku, className: 'flow-sku' },
+      { value: row.customer, className: 'flow-text' },
+      { value: row.address, className: 'flow-wide' },
+      { value: row.deliveryType, className: 'flow-text' },
+      { value: row.sourcingOptions && row.sourcingOptions.correlationId, className: 'flow-code flow-corr' },
+      { value: row.capacity && row.capacity.correlationId, className: 'flow-code flow-corr' },
+      { value: row.reserveDelivery && row.reserveDelivery.correlationId, className: 'flow-code flow-corr' },
+    ].forEach(({ value, className }) => {
       const cell = document.createElement('td');
       cell.textContent = value || '-';
-      if (!value) cell.className = 'flow-missing';
+      cell.className = value ? className : 'flow-missing';
       if (value) cell.title = value;
       tableRow.appendChild(cell);
     });

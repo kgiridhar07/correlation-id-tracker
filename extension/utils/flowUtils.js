@@ -253,7 +253,6 @@ function getMilestoneKey(label) {
 export function buildOrderFlowRows(events, flowState = {}, milestones = ORDER_FLOW_MILESTONES) {
   const selectedEvents = filterEventsForFlow(events, flowState, Date.now());
   const normalizedMilestones = normalizeOrderFlowMilestones(milestones);
-  const contextByTab = buildBusinessContextByTab(flowState, selectedEvents);
   const globalContext = buildBusinessContext(flowState, selectedEvents);
   const rowsByTrackingId = new Map();
 
@@ -266,14 +265,16 @@ export function buildOrderFlowRows(events, flowState = {}, milestones = ORDER_FL
 
     const correlationEvent = findMilestoneCorrelationEvent(request.events) || trackingEvent;
     const trackingId = trackingEvent.correlationId;
-    const context = contextByTab.get(request.tabId) || globalContext;
-    const row = ensureFlowRow(rowsByTrackingId, trackingId, context, request.tabId);
+    const row = ensureFlowRow(rowsByTrackingId, trackingId, emptyBusinessContext(), request.tabId);
     row[match.key] = {
       correlationId: correlationEvent.correlationId,
       headerName: correlationEvent.headerName || '',
       url: request.url || '',
       timestamp: correlationEvent.timestamp || request.timestamp || 0,
     };
+    row.firstSeen = Math.min(row.firstSeen || request.timestamp || correlationEvent.timestamp || 0, request.timestamp || correlationEvent.timestamp || 0);
+    row.networkFirstSeen = Math.min(row.networkFirstSeen || request.timestamp || correlationEvent.timestamp || 0, request.timestamp || correlationEvent.timestamp || 0);
+    row.networkLastUpdated = Math.max(row.networkLastUpdated || 0, correlationEvent.timestamp || request.timestamp || 0);
     row.lastUpdated = Math.max(row.lastUpdated, correlationEvent.timestamp || request.timestamp || 0);
   }
 
@@ -281,16 +282,55 @@ export function buildOrderFlowRows(events, flowState = {}, milestones = ORDER_FL
     ensureFlowRow(rowsByTrackingId, '', globalContext, -1);
   }
 
-  return Array.from(rowsByTrackingId.values()).sort((a, b) => b.lastUpdated - a.lastUpdated);
+  const rows = Array.from(rowsByTrackingId.values()).sort((a, b) => a.firstSeen - b.firstSeen);
+  applyScopedBusinessContext(rows, flowState, selectedEvents, globalContext);
+  return rows.sort((a, b) => b.lastUpdated - a.lastUpdated);
 }
 
-function buildBusinessContextByTab(flowState, events) {
-  const tabIds = Array.from(new Set(events.map((event) => event.tabId).filter((tabId) => Number.isFinite(tabId) && tabId >= 0)));
-  const contextByTab = new Map();
-  for (const tabId of tabIds) {
-    contextByTab.set(tabId, buildBusinessContext(flowState, events.filter((event) => event.tabId === tabId)));
+function applyScopedBusinessContext(rows, flowState, events, globalContext) {
+  if (!rows.length) return;
+  const pageEvents = events.filter((event) => event.sourceType === 'page-data');
+
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
+    const previousRow = rows[index - 1];
+    const nextRow = rows[index + 1];
+    const windowStart = previousRow ? midpoint(previousRow.networkLastUpdated, row.networkFirstSeen) : Number.NEGATIVE_INFINITY;
+    const windowEnd = nextRow ? midpoint(row.networkLastUpdated, nextRow.networkFirstSeen) : Number.POSITIVE_INFINITY;
+    const scopedEvents = pageEvents.filter((event) => {
+      const timestamp = event.timestamp || 0;
+      const matchesTab = row.tabId < 0 || !Number.isFinite(event.tabId) || event.tabId === row.tabId;
+      return matchesTab && timestamp >= windowStart && timestamp < windowEnd;
+    });
+    const scopedContext = buildBusinessContext({}, scopedEvents);
+    const context = hasBusinessContext(scopedContext)
+      ? buildBusinessContext(flowState, scopedEvents)
+      : buildManualContext(flowState, globalContext);
+    mergeFlowContext(row, context);
   }
-  return contextByTab;
+}
+
+function emptyBusinessContext() {
+  return { sku: '', skus: [], customer: '', address: '', deliveryType: '', quoteId: '', timestamp: 0 };
+}
+
+function midpoint(left, right) {
+  return left + ((right - left) / 2);
+}
+
+function buildManualContext(flowState, globalContext) {
+  if (!flowState.sku && !flowState.customer && !flowState.address && !flowState.deliveryType) {
+    return emptyBusinessContext();
+  }
+  return {
+    sku: flowState.sku || '',
+    skus: flowState.sku ? [flowState.sku] : [],
+    customer: flowState.customer || '',
+    address: flowState.address || '',
+    deliveryType: flowState.deliveryType || '',
+    quoteId: globalContext.quoteId || '',
+    timestamp: 0,
+  };
 }
 
 function hasBusinessContext(context) {
@@ -340,10 +380,18 @@ function ensureFlowRow(rowsByTrackingId, trackingId, context, tabId) {
       sourcingOptions: null,
       capacity: null,
       reserveDelivery: null,
+      firstSeen: context.timestamp || 0,
+      networkFirstSeen: 0,
+      networkLastUpdated: 0,
       lastUpdated: context.timestamp || 0,
     });
   }
   const row = rowsByTrackingId.get(key);
+  mergeFlowContext(row, context);
+  return row;
+}
+
+function mergeFlowContext(row, context) {
   row.sku ||= context.sku || '';
   row.skus = mergeValues(row.skus || [], context.skus || []);
   row.sku = row.skus.length ? row.skus.join(', ') : row.sku;
@@ -351,6 +399,7 @@ function ensureFlowRow(rowsByTrackingId, trackingId, context, tabId) {
   row.address ||= context.address || '';
   row.deliveryType ||= context.deliveryType || '';
   row.quoteId ||= context.quoteId || '';
+  row.firstSeen = row.firstSeen || context.timestamp || 0;
   row.lastUpdated = Math.max(row.lastUpdated || 0, context.timestamp || 0);
   return row;
 }

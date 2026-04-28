@@ -262,6 +262,40 @@ test('builds one order flow row from page values and network milestones', () => 
   assertEqual(rows[0].reserveDelivery.correlationId, 'RES-CORR');
 });
 
+test('keeps previous order flow rows when another flow is captured', () => {
+  const milestones = normalizeOrderFlowMilestones([
+    'Sourcing Options | sourcingOptions',
+    'Capacity | callType=capacity',
+    'Reserve Delivery | reserveDelivery',
+  ]);
+  const events = [
+    { requestId: 'a1', correlationId: 'TRACK-1', headerName: 'order-tracking-id', timestamp: 1000, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'a1', correlationId: 'SRC-1', headerName: 'usom-correlationid', timestamp: 1001, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'a2', correlationId: 'TRACK-1', headerName: 'order-tracking-id', timestamp: 1100, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { requestId: 'a2', correlationId: 'CAP-1', headerName: 'usom-correlationid', timestamp: 1101, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { correlationId: 'SKU-1', timestamp: 1200, sourceType: 'page-data', fieldLabel: 'SKU', fieldPath: 'dom:[data-testid="product-description__sku-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/product/1' },
+    { correlationId: 'QUOTE-1', timestamp: 1210, sourceType: 'page-data', fieldLabel: 'Quote ID', fieldPath: 'dom:[data-testid="order-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/quote/1' },
+    { requestId: 'b1', correlationId: 'TRACK-2', headerName: 'order-tracking-id', timestamp: 2000, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'b1', correlationId: 'SRC-2', headerName: 'usom-correlationid', timestamp: 2001, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'b2', correlationId: 'TRACK-2', headerName: 'order-tracking-id', timestamp: 2100, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/reserveDelivery' },
+    { requestId: 'b2', correlationId: 'RES-2', headerName: 'usom-correlationid', timestamp: 2101, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/reserveDelivery' },
+    { correlationId: 'SKU-2', timestamp: 2200, sourceType: 'page-data', fieldLabel: 'SKU', fieldPath: 'dom:[data-testid="product-description__sku-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/product/2' },
+    { correlationId: 'QUOTE-2', timestamp: 2210, sourceType: 'page-data', fieldLabel: 'Quote ID', fieldPath: 'dom:[data-testid="order-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/quote/2' },
+  ];
+  const rows = buildOrderFlowRows(events, {}, milestones);
+  assertEqual(rows.length, 2);
+  assertEqual(rows[0].orderTrackingId, 'TRACK-2');
+  assertEqual(rows[0].sku, 'SKU-2');
+  assertEqual(rows[0].quoteId, 'QUOTE-2');
+  assertEqual(rows[0].sourcingOptions.correlationId, 'SRC-2');
+  assertEqual(rows[0].reserveDelivery.correlationId, 'RES-2');
+  assertEqual(rows[1].orderTrackingId, 'TRACK-1');
+  assertEqual(rows[1].sku, 'SKU-1');
+  assertEqual(rows[1].quoteId, 'QUOTE-1');
+  assertEqual(rows[1].sourcingOptions.correlationId, 'SRC-1');
+  assertEqual(rows[1].capacity.correlationId, 'CAP-1');
+});
+
 test('fills order flow business context from captured page data', () => {
   const now = 1000000;
   const events = [
