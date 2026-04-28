@@ -39,7 +39,7 @@ function evictOldestPending() {
  * Build and persist a CorrelationEvent, broadcast to popup.
  * @param {Object} params
  */
-function emitEvent({ requestId, url, method, correlationId, sourceType, tabId }) {
+function emitEvent({ requestId, url, method, correlationId, sourceType, tabId, headerName }) {
   const event = {
     requestId,
     timestamp: Date.now(),
@@ -47,6 +47,7 @@ function emitEvent({ requestId, url, method, correlationId, sourceType, tabId })
     method: method || '',
     correlationId,
     sourceType,
+    headerName: headerName || '',
     tabId: tabId ?? -1,
   };
 
@@ -74,13 +75,14 @@ function onBeforeSendHeaders(details) {
   evictOldestPending();
 
   // Emit an event for each correlation ID found in request headers
-  for (const { value } of ids) {
+  for (const { headerName, value } of ids) {
     emitEvent({
       requestId: details.requestId,
       url: details.url,
       method: details.method,
       correlationId: value,
       sourceType: SOURCE_TYPES.REQUEST_HEADER,
+      headerName,
       tabId: details.tabId,
     });
   }
@@ -103,13 +105,14 @@ function onHeadersReceived(details) {
   const method = details.method || (pending && pending.method) || '';
   const tabId = details.tabId ?? (pending && pending.tabId) ?? -1;
 
-  for (const { value } of ids) {
+  for (const { headerName, value } of ids) {
     emitEvent({
       requestId: details.requestId,
       url,
       method,
       correlationId: value,
       sourceType: SOURCE_TYPES.RESPONSE_HEADER,
+      headerName,
       tabId,
     });
   }

@@ -14,10 +14,13 @@ let failed = 0;
 test('extracts configured correlation headers case-insensitively', () => {
   const ids = extractCorrelationIds([
     { name: 'X-Correlation-ID', value: 'abc-123' },
+    { name: 'Order-Tracking-ID', value: 'order-track-123' },
     { name: 'content-type', value: 'application/json' },
   ]);
-  assertEqual(ids.length, 1);
+  assertEqual(ids.length, 2);
   assertEqual(ids[0].value, 'abc-123');
+  assertEqual(ids[1].headerName, 'order-tracking-id');
+  assertEqual(ids[1].value, 'order-track-123');
 });
 
 test('matches default URL filters', () => {
@@ -204,6 +207,26 @@ test('uses the most specific milestone pattern for overlapping URLs', () => {
   assertEqual(sourcingSection.includes('sourcing-only'), true);
   assertEqual(sourcingSection.includes('capacity-only'), false);
   assertEqual(capacitySection.includes('capacity-only'), true);
+});
+
+test('prefers order tracking ID for stitched milestone events', () => {
+  const now = 1000000;
+  const milestones = normalizeOrderFlowMilestones([
+    'Sourcing Options | sourcingOptions',
+    'Capacity | sourcingOptions?callType=capacity',
+    'Reserve Delivery | reserveDelivery',
+  ]);
+  const events = [
+    { correlationId: 'per-call-correlation', headerName: 'usom-correlationid', timestamp: now - 1000, sourceType: 'request-header', method: 'GET', url: 'https://api.example.com/sourcingOptions' },
+    { correlationId: 'shared-order-tracking', headerName: 'order-tracking-id', timestamp: now - 2000, sourceType: 'request-header', method: 'GET', url: 'https://api.example.com/sourcingOptions' },
+  ];
+  const report = buildOrderFlowReport(events, {}, now, milestones);
+  const sourcingIndex = report.body.indexOf('Sourcing Options:');
+  const capacityIndex = report.body.indexOf('Capacity:');
+  const sourcingSection = report.body.slice(sourcingIndex, capacityIndex);
+  assertEqual(sourcingSection.includes('shared-order-tracking'), true);
+  assertEqual(sourcingSection.includes('Header: order-tracking-id'), true);
+  assertEqual(sourcingSection.includes('per-call-correlation'), false);
 });
 
 test('fills order flow business context from captured page data', () => {

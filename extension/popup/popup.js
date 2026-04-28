@@ -234,7 +234,7 @@ async function exportCsv() {
   if (!response || !response.success) { setStatus('Export failed'); return; }
 
   const metadata = buildExportMetadata(response.data);
-  const header = 'timestamp,requestId,method,domain,url,capturedValue,sourceType,fieldLabel,fieldPath,valueType,tabId\n';
+  const header = 'timestamp,requestId,method,domain,url,capturedValue,sourceType,headerName,fieldLabel,fieldPath,valueType,tabId\n';
   const rows = response.data.map((event) => [
     new Date(event.timestamp).toISOString(),
     event.requestId,
@@ -243,6 +243,7 @@ async function exportCsv() {
     csvEscape(event.url || ''),
     event.correlationId,
     event.sourceType,
+    event.headerName || '',
     csvEscape(event.fieldLabel || ''),
     csvEscape(event.fieldPath || ''),
     event.valueType || '',

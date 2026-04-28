@@ -130,7 +130,7 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `urlFilters` | `['orderup', 'usom', '/api/']` | URL substrings to match |
-| `correlationHeaders` | `['x-correlation-id', ...]` | Header names to extract |
+| `correlationHeaders` | `['x-correlation-id', 'order-tracking-id', ...]` | Header names to extract |
 | `pageDataWatchers` | `[]` | Page global paths to capture |
 | `pageDataPollMs` | `1,000` | Page-data polling interval |
 | `pageDataDurationSeconds` | `120` | How long to poll after page load |
@@ -218,6 +218,8 @@ Sourcing Options | /sourcing-options; /source/options
 
 The extension still captures the ID from configured network headers. These milestone patterns only tell the Flow Report which captured network events belong under each step.
 
+When multiple configured headers are captured for the same milestone, Flow Report prefers `order-tracking-id` because it is shared across Sourcing Options, Capacity, and Reserve Delivery.
+
 ---
 
 ## Captured Event Schema
@@ -230,6 +232,7 @@ The extension still captures the ID from configured network headers. These miles
   "method": "POST",
   "correlationId": "abc-123-def-456",
   "sourceType": "response-header",
+  "headerName": "order-tracking-id",
   "fieldLabel": "Cart ID",
   "fieldPath": "digitalData.cart.cartId",
   "valueType": "string",

@@ -106,6 +106,7 @@ function createRow(evt) {
 
 function getValueTitle(evt) {
   const details = [evt.correlationId];
+  if (evt.headerName) details.push(`Header: ${evt.headerName}`);
   if (evt.fieldLabel) details.push(`Field: ${evt.fieldLabel}`);
   if (evt.fieldPath) details.push(`Path: ${evt.fieldPath}`);
   return details.join('\n');

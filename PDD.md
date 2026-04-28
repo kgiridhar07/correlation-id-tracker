@@ -237,6 +237,7 @@ Manual report
   "method": "POST",
   "correlationId": "abc-123-def-456",
   "sourceType": "response-header",
+  "headerName": "order-tracking-id",
   "fieldLabel": "Cart ID",
   "fieldPath": "digitalData.cart.cartId",
   "valueType": "string",
@@ -244,7 +245,7 @@ Manual report
 }
 ```
 
-For network header captures, `fieldLabel`, `fieldPath`, and `valueType` may be absent. For page-data captures, `correlationId` stores the captured value so the existing dashboard, duplicate logic, copy, export, and report flows can reuse one event model.
+For network header captures, `headerName` stores the matched request or response header name, while `fieldLabel`, `fieldPath`, and `valueType` may be absent. For page-data captures, `correlationId` stores the captured value so the existing dashboard, duplicate logic, copy, export, and report flows can reuse one event model.
 
 ## 10. Configuration Design
 
@@ -372,6 +373,8 @@ Automatic values:
 - Sourcing Options correlation IDs from URLs containing `sourcing-options`, `sourcing options`, or `sourcing`.
 - Capacity correlation IDs from URLs containing `capacity`.
 - Reserve Delivery correlation IDs from URLs containing `reserve-delivery`, `reserve delivery`, or `reserve`.
+
+When multiple configured headers are present on a matching milestone request, reports prefer `order-tracking-id` because it is common across the three order-flow calls.
 
 Milestone URL patterns are user-configurable in Options with this format:
 

@@ -50,6 +50,7 @@ export function buildOrderFlowReport(events, flowState = {}, now = Date.now(), m
       lines.push(`  - ${event.correlationId}`);
       lines.push(`    Time: ${formatTime(event.timestamp)}`);
       lines.push(`    Source: ${event.sourceType || '-'}`);
+      if (event.headerName) lines.push(`    Header: ${event.headerName}`);
       lines.push(`    URL: ${event.url || '-'}`);
     }
   }
@@ -165,13 +166,23 @@ function findBestMilestoneMatch(event, milestones) {
 function dedupeMilestoneEvents(events) {
   const seen = new Set();
   const matches = [];
-  for (const event of [...events].sort((a, b) => b.timestamp - a.timestamp)) {
+  for (const event of [...events].sort(compareMilestoneEvents)) {
     const key = `${event.correlationId}|${event.url}`;
     if (seen.has(key)) continue;
     seen.add(key);
     matches.push(event);
   }
   return matches;
+}
+
+function compareMilestoneEvents(a, b) {
+  const headerPreference = getHeaderPreference(b) - getHeaderPreference(a);
+  if (headerPreference !== 0) return headerPreference;
+  return b.timestamp - a.timestamp;
+}
+
+function getHeaderPreference(event) {
+  return String(event.headerName || '').toLowerCase() === 'order-tracking-id' ? 1 : 0;
 }
 
 function formatWindow(flowState, now) {

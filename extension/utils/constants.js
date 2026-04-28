@@ -8,6 +8,7 @@ export const CORRELATION_HEADERS = Object.freeze([
   'x-correlation-id',
   'x-usom-correlation-id',
   'correlation-id',
+  'order-tracking-id',
   'trace-id',
   'request-id',
 ]);
