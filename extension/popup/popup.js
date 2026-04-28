@@ -6,7 +6,7 @@ import { MSG, UI } from '../utils/constants.js';
 import { getExtensionApi, sendRuntimeMessage } from '../utils/browserApi.js';
 import { collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
 import { debounce, formatTimestamp, getEventKey, getHostname } from '../utils/helpers.js';
-import { buildOrderFlowReport } from '../utils/flowUtils.js';
+import { buildOrderFlowReport, buildOrderFlowRows } from '../utils/flowUtils.js';
 import { buildInvestigationReport } from '../utils/reportUtils.js';
 import { initRenderer, renderEvents, prependEvent } from './tableRenderer.js';
 
@@ -44,6 +44,8 @@ const flowCustomer = document.getElementById('flowCustomer');
 const flowAddress = document.getElementById('flowAddress');
 const flowDeliveryType = document.getElementById('flowDeliveryType');
 const flowNotes = document.getElementById('flowNotes');
+const orderFlowBody = document.getElementById('orderFlowBody');
+const orderFlowEmpty = document.getElementById('orderFlowEmpty');
 const eventsBody = document.getElementById('eventsBody');
 const emptyState = document.getElementById('emptyState');
 const statusText = document.getElementById('statusText');
@@ -66,14 +68,21 @@ let latestStats = null;
 let eventMap = new Map();
 let currentReport = null;
 let flowState = loadStoredFlowState();
+let activeOrderFlowMilestones = [];
+let currentOrderFlowRows = [];
 
 async function loadEvents() {
   setStatus('Loading...');
   try {
-    const [eventsResponse, statsResponse] = await Promise.all([
+    const [eventsResponse, statsResponse, configResponse] = await Promise.all([
       sendMessage({ type: MSG.EXPORT_EVENTS }),
       sendMessage({ type: MSG.GET_STATS }),
+      sendMessage({ type: MSG.GET_CONFIG }),
     ]);
+
+    if (configResponse && configResponse.success) {
+      activeOrderFlowMilestones = configResponse.data.orderFlowMilestones || [];
+    }
 
     if (eventsResponse && eventsResponse.success) {
       allEvents = eventsResponse.data || [];
@@ -107,8 +116,42 @@ function refreshDerivedState() {
 
   eventMap = new Map(visibleEvents.map((event) => [getEventKey(event), event]));
   renderEvents(visibleEvents);
+  renderOrderFlowRows();
   updateDashboard(enrichedEvents);
   updateStats();
+}
+
+function renderOrderFlowRows() {
+  if (!orderFlowBody) return;
+  currentOrderFlowRows = buildOrderFlowRows(allEvents, flowState, activeOrderFlowMilestones);
+  orderFlowBody.textContent = '';
+
+  for (const row of currentOrderFlowRows) {
+    const tableRow = document.createElement('tr');
+    [
+      row.orderTrackingId,
+      row.quoteId,
+      row.sku,
+      row.customer,
+      row.address,
+      row.deliveryType,
+      row.sourcingOptions && row.sourcingOptions.correlationId,
+      row.capacity && row.capacity.correlationId,
+      row.reserveDelivery && row.reserveDelivery.correlationId,
+    ].forEach((value) => {
+      const cell = document.createElement('td');
+      cell.textContent = value || '-';
+      if (!value) cell.className = 'flow-missing';
+      if (value) cell.title = value;
+      tableRow.appendChild(cell);
+    });
+    orderFlowBody.appendChild(tableRow);
+  }
+
+  if (orderFlowEmpty) orderFlowEmpty.hidden = currentOrderFlowRows.length > 0;
+  if (flowStatus) flowStatus.textContent = currentOrderFlowRows.length
+    ? `${currentOrderFlowRows.length} stitched order flow${currentOrderFlowRows.length === 1 ? '' : 's'}`
+    : 'Clear, run the order, then review the stitched row.';
 }
 
 function updateDashboard(events) {
@@ -334,17 +377,39 @@ function buildScopeLabel() {
 async function generateFlowReport() {
   flowState = readFlowInputs();
   saveFlowState();
-  const config = await getConfig();
-  const report = buildOrderFlowReport(allEvents, flowState, Date.now(), config.orderFlowMilestones);
+  renderOrderFlowRows();
+  const report = currentOrderFlowRows.length
+    ? buildOrderFlowTableText(currentOrderFlowRows)
+    : buildOrderFlowReport(allEvents, flowState, Date.now(), activeOrderFlowMilestones).body;
   currentReport = {
-    subject: report.subject,
-    body: report.body,
-    truncatedBody: report.body,
+    subject: 'Order Flow Rows',
+    body: report,
+    truncatedBody: report,
   };
-  reportPreview.value = report.body;
-  reportMeta.textContent = `${report.matchedEvents.length} captured events scanned. Flow fields are auto-detected from page data and milestone URL patterns.`;
+  await navigator.clipboard.writeText(report);
+  reportPreview.value = report;
+  reportMeta.textContent = `${currentOrderFlowRows.length} stitched order flow rows copied.`;
   reportPanel.hidden = false;
-  setStatus('Flow report generated');
+  setStatus('Flow copied');
+}
+
+function buildOrderFlowTableText(rows) {
+  const headers = ['Order Tracking ID', 'Quote', 'SKU', 'Customer', 'Address', 'Delivery', 'Sourcing Corr', 'Capacity Corr', 'Reserve Corr'];
+  const lines = [headers.join('\t')];
+  for (const row of rows) {
+    lines.push([
+      row.orderTrackingId,
+      row.quoteId,
+      row.sku,
+      row.customer,
+      row.address,
+      row.deliveryType,
+      row.sourcingOptions && row.sourcingOptions.correlationId,
+      row.capacity && row.capacity.correlationId,
+      row.reserveDelivery && row.reserveDelivery.correlationId,
+    ].map((value) => value || '-').join('\t'));
+  }
+  return lines.join('\n');
 }
 
 function readFlowInputs() {
@@ -394,7 +459,7 @@ function updateFlowUi() {
   if (flowNotes) flowNotes.value = flowState.notes || '';
   if (!flowStatus) return;
 
-  flowStatus.textContent = 'Auto-detects from captured events';
+  renderOrderFlowRows();
 }
 
 async function clearEvents() {
@@ -469,6 +534,7 @@ function onMessage(message) {
     case MSG.NEW_EVENT:
       allEvents.unshift(message.data);
       latestEvent = message.data;
+      renderOrderFlowRows();
       updateLatestPanel();
       if (hasActiveFilters()) {
         debouncedRefresh();
@@ -483,11 +549,14 @@ function onMessage(message) {
     case MSG.EVENTS_CLEARED:
       allEvents = [];
       latestEvent = null;
+      renderOrderFlowRows();
       refreshDerivedState();
       updateLatestPanel();
       setStatus('Events cleared');
       break;
     case MSG.CONFIG_UPDATED:
+      activeOrderFlowMilestones = message.data && message.data.orderFlowMilestones ? message.data.orderFlowMilestones : activeOrderFlowMilestones;
+      renderOrderFlowRows();
       setStatus('Options updated');
       break;
   }

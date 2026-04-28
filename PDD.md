@@ -351,17 +351,9 @@ Email behavior:
 - Does not send automatically.
 - Does not store email passwords or API secrets.
 
-### Order Flow Reports
+### Order Flow Table
 
-Order flow reports combine optional manual overrides with captured page values and matching network events from the current captured event set.
-
-Optional manual overrides:
-
-- SKU.
-- Customer.
-- Address.
-- Delivery Type.
-- Notes.
+Order flow rows combine captured page values with matching network events from the current captured event set. Rows are keyed by the shared `order-tracking-id` header.
 
 Automatic values:
 
@@ -370,11 +362,11 @@ Automatic values:
 - Customer from `.customer-card__name .pal--type-style-05`.
 - Address from the fulfillment row labeled `DELIVERY ADDRESS`.
 - Delivery Type from the fulfillment row labeled `DELIVERY OPTIONS`.
-- Sourcing Options correlation IDs from URLs containing `sourcing-options`, `sourcing options`, or `sourcing`.
-- Capacity correlation IDs from URLs containing `capacity`.
-- Reserve Delivery correlation IDs from URLs containing `reserve-delivery`, `reserve delivery`, or `reserve`.
+- Sourcing Options correlation ID from the matching network request.
+- Capacity correlation ID from the matching network request.
+- Reserve Delivery correlation ID from the matching network request.
 
-When multiple configured headers are present on a matching milestone request, reports prefer `order-tracking-id` because it is common across the three order-flow calls.
+When multiple configured headers are present on a matching milestone request, the row uses `order-tracking-id` as the stitch key and prefers `usom-correlationid` as the milestone correlation ID.
 
 Built-in DOM values are scanned from the order page independently of API URL filters so business context can still populate when URL filters are tuned for network endpoints. Custom page-data watchers continue to use URL filters.
 

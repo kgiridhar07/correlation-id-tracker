@@ -19,7 +19,7 @@ export function initMessageBus() {
   log.info('Message bus initialised');
 }
 
-async function handleMessage(message) {
+async function handleMessage(message, sender) {
   if (!message || !message.type) return undefined;
 
   switch (message.type) {
@@ -42,7 +42,7 @@ async function handleMessage(message) {
       return handleGetStats();
 
     case MSG.CAPTURE_PAGE_DATA:
-      return handleCapturePageData(message);
+      return handleCapturePageData(message, sender);
 
     default:
       return undefined;
@@ -112,7 +112,7 @@ async function handleGetStats() {
   }
 }
 
-async function handleCapturePageData(message) {
+async function handleCapturePageData(message, sender) {
   try {
     const payload = message.data || {};
     const value = String(payload.value || '').trim();
@@ -125,7 +125,7 @@ async function handleCapturePageData(message) {
       method: 'PAGE',
       correlationId: value,
       sourceType: SOURCE_TYPES.PAGE_DATA,
-      tabId: Number.isFinite(payload.tabId) ? payload.tabId : -1,
+      tabId: Number.isFinite(payload.tabId) ? payload.tabId : (sender && sender.tab && Number.isFinite(sender.tab.id) ? sender.tab.id : -1),
       fieldLabel: String(payload.label || payload.path || 'Page Data'),
       fieldPath: String(payload.path || ''),
       valueType: String(payload.valueType || 'string'),

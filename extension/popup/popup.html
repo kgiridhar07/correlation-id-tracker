@@ -36,20 +36,32 @@
     <section class="flow-panel" aria-label="Order flow capture">
       <div class="flow-header">
         <div>
-          <h2>Order Flow Capture</h2>
-          <p id="flowStatus">Auto-detects from captured events</p>
+          <h2>Order Flow</h2>
+          <p id="flowStatus">Clear, run the order, then review the stitched row.</p>
         </div>
         <div class="flow-actions">
-          <button id="btnGenerateFlow">Flow Report</button>
+          <button id="btnGenerateFlow">Copy Flow</button>
         </div>
       </div>
-      <div class="flow-fields">
-        <input id="flowSku" type="text" placeholder="SKU" autocomplete="off">
-        <input id="flowCustomer" type="text" placeholder="Customer" autocomplete="off">
-        <input id="flowAddress" type="text" placeholder="Address" autocomplete="off">
-        <input id="flowDeliveryType" type="text" placeholder="Delivery Type" autocomplete="off">
+      <div class="flow-table-wrap">
+        <table class="flow-table">
+          <thead>
+            <tr>
+              <th>Order Tracking ID</th>
+              <th>Quote</th>
+              <th>SKU</th>
+              <th>Customer</th>
+              <th>Address</th>
+              <th>Delivery</th>
+              <th>Sourcing Corr</th>
+              <th>Capacity Corr</th>
+              <th>Reserve Corr</th>
+            </tr>
+          </thead>
+          <tbody id="orderFlowBody"></tbody>
+        </table>
       </div>
-      <input id="flowNotes" class="flow-notes" type="text" placeholder="Notes" autocomplete="off">
+      <p id="orderFlowEmpty" class="flow-empty">No stitched order flow yet.</p>
     </section>
 
     <section class="dashboard" aria-label="Correlation dashboard">

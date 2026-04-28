@@ -110,9 +110,9 @@ Firefox support uses the shared WebExtension API wrapper in `utils/browserApi.js
 
 1. **Browse normally** — the extension silently monitors matching network traffic in the background.
 2. **Click the extension icon** to open the popup dashboard.
-3. **Read the dashboard** — scan total events, unique IDs, duplicate rate, active domains, request/response split, top domains, top methods, repeated IDs, and last-hour activity.
+3. **Read the order-flow row** — the Order Flow table stitches page values and the three network correlation IDs by shared `order-tracking-id`.
 4. **Open expanded view** — click "Open" in the popup to launch the same dashboard in a full browser tab.
-5. **Capture an order flow** — clear old events, perform the ordering steps, then click "Flow Report". SKU, customer, address, delivery type, and Quote ID are auto-detected when present.
+5. **Capture an order flow** — clear old events, perform the ordering steps, then review the Order Flow row. Use "Copy Flow" to copy the stitched row.
 6. **Use latest ID** — copy the newest ID or a ready-to-paste investigation note from the top panel.
 7. **Filter** — narrow by search text, source, method, domain, time range, or duplicate status.
 8. **Copy** — copy an event as ID, note, or JSON from the Actions column.
@@ -175,17 +175,7 @@ Email sending uses `mailto:` and opens a draft in the user's configured email cl
 
 ### Order Flow Capture
 
-Order Flow Capture is designed for SKU-to-delivery troubleshooting. Clear old events, perform the ordering flow, then generate a Flow Report. The extension stitches captured page values and milestone network IDs from the current captured event set.
-
-Optional manual overrides:
-
-```text
-SKU
-Customer
-Address
-Delivery Type
-Notes
-```
+Order Flow Capture is designed for SKU-to-delivery troubleshooting. Clear old events, perform the ordering flow, then review the stitched Order Flow table. Each row is keyed by the shared `order-tracking-id` captured on the network requests.
 
 Automatic values:
 
@@ -195,14 +185,14 @@ SKU from [data-testid="product-description__sku-number"]
 Customer from .customer-card__name .pal--type-style-05
 Address from the fulfillment row labeled DELIVERY ADDRESS
 Delivery Type from the fulfillment row labeled DELIVERY OPTIONS
-Sourcing Options correlation IDs from URLs containing sourcing-options or sourcing
-Capacity correlation IDs from URLs containing capacity
-Reserve Delivery correlation IDs from URLs containing reserve-delivery or reserve
+Sourcing Options correlation ID from the matching network request
+Capacity correlation ID from the matching network request
+Reserve Delivery correlation ID from the matching network request
 ```
 
 The built-in DOM values above are scanned from the order page even when URL filters are focused on API paths. Custom page-data watchers still use URL filters.
 
-The flow report combines optional manual overrides, captured DOM values, and matching network header captures into one stitched timeline. Manual fields still override captured page values when typed.
+The Order Flow table combines captured DOM values and matching network header captures on the same line. For each milestone request, `order-tracking-id` is used as the stitch key and `usom-correlationid` is used as the milestone correlation ID when present.
 
 Milestone URL matching is configurable in Options. Use one line per milestone:
 
@@ -218,9 +208,9 @@ You can put multiple patterns on a line with semicolons:
 Sourcing Options | /sourcing-options; /source/options
 ```
 
-The extension still captures the ID from configured network headers. These milestone patterns only tell the Flow Report which captured network events belong under each step.
+The extension still captures IDs from configured network headers. These milestone patterns only tell the Order Flow table which captured network events belong under each step.
 
-When multiple configured headers are captured for the same milestone, Flow Report prefers `order-tracking-id` because it is shared across Sourcing Options, Capacity, and Reserve Delivery.
+When `order-tracking-id` is shared across Sourcing Options, Capacity, and Reserve Delivery, the row can show all three `usom-correlationid` values beside the same SKU/customer/address/delivery/quote data.
 
 ---
 

@@ -38,10 +38,6 @@ body.full-dashboard {
   grid-template-columns: minmax(280px, 1fr) repeat(4, minmax(120px, auto)) auto auto;
 }
 
-.full-dashboard .flow-fields {
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-}
-
 .full-dashboard #reportPreview {
   min-height: 220px;
   max-height: 360px;
@@ -69,7 +65,6 @@ body.full-dashboard {
 
 @media (max-width: 900px) {
   .full-dashboard .filters,
-  .full-dashboard .flow-fields,
   .full-dashboard .metric-grid,
   .full-dashboard .dashboard-panels {
     grid-template-columns: 1fr 1fr;

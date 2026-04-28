@@ -118,6 +118,7 @@ function buildBusinessContext(flowState, events) {
     customer: flowState.customer || findPageDataValue(events, ['customer'], ['customer-card__name']),
     address: flowState.address || findPageDataValue(events, ['address'], ['delivery address']),
     deliveryType: flowState.deliveryType || findPageDataValue(events, ['delivery type', 'delivery options'], ['delivery options', 'delivery-type']),
+    quoteId: findQuoteId(events),
   };
 }
 
@@ -221,4 +222,109 @@ function getMilestoneKey(label) {
   if (normalized.includes('capacity')) return 'capacity';
   if (normalized.includes('reserve')) return 'reserveDelivery';
   return '';
+}
+
+export function buildOrderFlowRows(events, flowState = {}, milestones = ORDER_FLOW_MILESTONES) {
+  const selectedEvents = filterEventsForFlow(events, flowState, Date.now());
+  const normalizedMilestones = normalizeOrderFlowMilestones(milestones);
+  const contextByTab = buildBusinessContextByTab(flowState, selectedEvents);
+  const globalContext = buildBusinessContext(flowState, selectedEvents);
+  const rowsByTrackingId = new Map();
+
+  for (const request of buildNetworkRequests(selectedEvents)) {
+    const match = findBestMilestoneMatch(request, normalizedMilestones);
+    if (!match) continue;
+
+    const trackingEvent = request.events.find((event) => isHeader(event, 'order-tracking-id'));
+    if (!trackingEvent || !trackingEvent.correlationId) continue;
+
+    const correlationEvent = findMilestoneCorrelationEvent(request.events) || trackingEvent;
+    const trackingId = trackingEvent.correlationId;
+    const context = contextByTab.get(request.tabId) || globalContext;
+    const row = ensureFlowRow(rowsByTrackingId, trackingId, context, request.tabId);
+    row[match.key] = {
+      correlationId: correlationEvent.correlationId,
+      headerName: correlationEvent.headerName || '',
+      url: request.url || '',
+      timestamp: correlationEvent.timestamp || request.timestamp || 0,
+    };
+    row.lastUpdated = Math.max(row.lastUpdated, correlationEvent.timestamp || request.timestamp || 0);
+  }
+
+  if (!rowsByTrackingId.size && hasBusinessContext(globalContext)) {
+    ensureFlowRow(rowsByTrackingId, '', globalContext, -1);
+  }
+
+  return Array.from(rowsByTrackingId.values()).sort((a, b) => b.lastUpdated - a.lastUpdated);
+}
+
+function buildBusinessContextByTab(flowState, events) {
+  const tabIds = Array.from(new Set(events.map((event) => event.tabId).filter((tabId) => Number.isFinite(tabId) && tabId >= 0)));
+  const contextByTab = new Map();
+  for (const tabId of tabIds) {
+    contextByTab.set(tabId, buildBusinessContext(flowState, events.filter((event) => event.tabId === tabId)));
+  }
+  return contextByTab;
+}
+
+function hasBusinessContext(context) {
+  return Boolean(context.sku || context.customer || context.address || context.deliveryType || context.quoteId);
+}
+
+function buildNetworkRequests(events) {
+  const requests = new Map();
+  for (const event of events) {
+    if (event.sourceType === 'page-data') continue;
+    const key = event.requestId || `${event.method}|${event.url}|${event.timestamp}`;
+    if (!requests.has(key)) {
+      requests.set(key, {
+        requestId: event.requestId || '',
+        url: event.url || '',
+        method: event.method || '',
+        tabId: Number.isFinite(event.tabId) ? event.tabId : -1,
+        timestamp: event.timestamp || 0,
+        events: [],
+      });
+    }
+    const request = requests.get(key);
+    request.events.push(event);
+    request.timestamp = Math.max(request.timestamp, event.timestamp || 0);
+  }
+  return Array.from(requests.values());
+}
+
+function findMilestoneCorrelationEvent(events) {
+  return events.find((event) => isHeader(event, 'usom-correlationid')) ||
+    events.find((event) => !isHeader(event, 'order-tracking-id')) ||
+    null;
+}
+
+function ensureFlowRow(rowsByTrackingId, trackingId, context, tabId) {
+  const key = trackingId || `context-${tabId}`;
+  if (!rowsByTrackingId.has(key)) {
+    rowsByTrackingId.set(key, {
+      orderTrackingId: trackingId,
+      tabId,
+      sku: context.sku || '',
+      customer: context.customer || '',
+      address: context.address || '',
+      deliveryType: context.deliveryType || '',
+      quoteId: context.quoteId || '',
+      sourcingOptions: null,
+      capacity: null,
+      reserveDelivery: null,
+      lastUpdated: 0,
+    });
+  }
+  const row = rowsByTrackingId.get(key);
+  row.sku ||= context.sku || '';
+  row.customer ||= context.customer || '';
+  row.address ||= context.address || '';
+  row.deliveryType ||= context.deliveryType || '';
+  row.quoteId ||= context.quoteId || '';
+  return row;
+}
+
+function isHeader(event, headerName) {
+  return String(event.headerName || '').toLowerCase() === headerName;
 }

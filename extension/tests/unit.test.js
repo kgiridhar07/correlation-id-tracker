@@ -2,7 +2,7 @@ import { extractCorrelationIds } from '../background/correlationExtractor.js';
 import { normalizeConfig } from '../utils/configManager.js';
 import { buildDuplicateCounts, collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
 import { isRelevantUrl } from '../utils/helpers.js';
-import { buildOrderFlowReport, normalizeOrderFlowMilestones } from '../utils/flowUtils.js';
+import { buildOrderFlowReport, buildOrderFlowRows, normalizeOrderFlowMilestones } from '../utils/flowUtils.js';
 import { normalizePageDataWatchers, parseDataPath, serializePageValue } from '../utils/pageDataUtils.js';
 import { buildInvestigationReport } from '../utils/reportUtils.js';
 
@@ -227,6 +227,35 @@ test('prefers order tracking ID for stitched milestone events', () => {
   assertEqual(sourcingSection.includes('shared-order-tracking'), true);
   assertEqual(sourcingSection.includes('Header: order-tracking-id'), true);
   assertEqual(sourcingSection.includes('per-call-correlation'), false);
+});
+
+test('builds one order flow row from page values and network milestones', () => {
+  const now = 1000000;
+  const milestones = normalizeOrderFlowMilestones([
+    'Sourcing Options | sourcingOptions',
+    'Capacity | callType=capacity',
+    'Reserve Delivery | reserveDelivery',
+  ]);
+  const events = [
+    { requestId: 'r1', correlationId: 'TRACK-1', headerName: 'order-tracking-id', timestamp: now - 1000, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'r1', correlationId: 'SRC-CORR', headerName: 'usom-correlationid', timestamp: now - 999, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'r2', correlationId: 'TRACK-1', headerName: 'order-tracking-id', timestamp: now - 900, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { requestId: 'r2', correlationId: 'CAP-CORR', headerName: 'usom-correlationid', timestamp: now - 899, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { requestId: 'r3', correlationId: 'TRACK-1', headerName: 'order-tracking-id', timestamp: now - 800, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/reserveDelivery' },
+    { requestId: 'r3', correlationId: 'RES-CORR', headerName: 'usom-correlationid', timestamp: now - 799, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/reserveDelivery' },
+    { correlationId: '1003236000', timestamp: now - 700, sourceType: 'page-data', fieldLabel: 'SKU', fieldPath: 'dom:[data-testid="product-description__sku-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/product' },
+    { correlationId: 'Rajesh Kumar M1', timestamp: now - 690, sourceType: 'page-data', fieldLabel: 'Customer', fieldPath: 'dom:.customer-card__name .pal--type-style-05', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/customer' },
+    { correlationId: 'H9179-307080', timestamp: now - 680, sourceType: 'page-data', fieldLabel: 'Quote ID', fieldPath: 'dom:[data-testid="order-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/quote' },
+  ];
+  const rows = buildOrderFlowRows(events, {}, milestones);
+  assertEqual(rows.length, 1);
+  assertEqual(rows[0].orderTrackingId, 'TRACK-1');
+  assertEqual(rows[0].sku, '1003236000');
+  assertEqual(rows[0].customer, 'Rajesh Kumar M1');
+  assertEqual(rows[0].quoteId, 'H9179-307080');
+  assertEqual(rows[0].sourcingOptions.correlationId, 'SRC-CORR');
+  assertEqual(rows[0].capacity.correlationId, 'CAP-CORR');
+  assertEqual(rows[0].reserveDelivery.correlationId, 'RES-CORR');
 });
 
 test('fills order flow business context from captured page data', () => {
