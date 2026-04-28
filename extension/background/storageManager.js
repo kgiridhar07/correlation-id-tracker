@@ -15,6 +15,9 @@ let db = null;
 /** @type {Array<Object>} pending write queue */
 const writeQueue = [];
 
+/** @type {Promise<boolean>|null} active flush operation */
+let flushPromise = null;
+
 /** @type {number|null} flush timer ID */
 let flushTimerId = null;
 
@@ -71,22 +74,37 @@ async function getDb() {
 export function queueEvent(event) {
   if (!isValidCorrelationEvent(event)) {
     log.warn('Dropped invalid event', event);
-    return;
+    return Promise.resolve();
   }
   writeQueue.push(event);
-
-  // Force flush if batch limit reached
-  if (writeQueue.length >= STORAGE_LIMITS.BATCH_MAX_SIZE) {
-    flushQueue();
-  }
+  return flushQueue();
 }
 
 /**
  * Flush the write queue to IndexedDB in a single transaction.
  */
 export async function flushQueue() {
+  if (flushPromise) {
+    await flushPromise;
+    if (writeQueue.length === 0) return;
+  }
+
   if (writeQueue.length === 0) return;
 
+  flushPromise = flushQueueBatch();
+  let flushed = false;
+  try {
+    flushed = await flushPromise;
+  } finally {
+    flushPromise = null;
+  }
+
+  if (flushed && writeQueue.length > 0) {
+    await flushQueue();
+  }
+}
+
+async function flushQueueBatch() {
   const batch = writeQueue.splice(0, writeQueue.length);
   try {
     const database = await getDb();
@@ -104,10 +122,12 @@ export async function flushQueue() {
 
     log.debug(`Flushed ${batch.length} events to IndexedDB`);
     await trimToMaxEvents();
+    return true;
   } catch (err) {
     log.error('Batch write failed, re-queuing events', err);
     // Re-queue failed events at the front
     writeQueue.unshift(...batch);
+    return false;
   }
 }
 

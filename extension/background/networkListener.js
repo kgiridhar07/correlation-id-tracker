@@ -39,7 +39,7 @@ function evictOldestPending() {
  * Build and persist a CorrelationEvent, broadcast to popup.
  * @param {Object} params
  */
-function emitEvent({ requestId, url, method, correlationId, sourceType, tabId, headerName }) {
+async function emitEvent({ requestId, url, method, correlationId, sourceType, tabId, headerName }) {
   const event = {
     requestId,
     timestamp: Date.now(),
@@ -51,10 +51,14 @@ function emitEvent({ requestId, url, method, correlationId, sourceType, tabId, h
     tabId: tabId ?? -1,
   };
 
-  queueEvent(event);
-  incrementBadge();
-  broadcastNewEvent(event);
-  log.debug('Emitted event', event.correlationId, event.sourceType);
+  try {
+    await queueEvent(event);
+    incrementBadge();
+    broadcastNewEvent(event);
+    log.debug('Emitted event', event.correlationId, event.sourceType);
+  } catch (err) {
+    log.error('Failed to persist emitted event', err);
+  }
 }
 
 /**
@@ -76,7 +80,7 @@ function onBeforeSendHeaders(details) {
 
   // Emit an event for each correlation ID found in request headers
   for (const { headerName, value } of ids) {
-    emitEvent({
+    void emitEvent({
       requestId: details.requestId,
       url: details.url,
       method: details.method,
@@ -106,7 +110,7 @@ function onHeadersReceived(details) {
   const tabId = details.tabId ?? (pending && pending.tabId) ?? -1;
 
   for (const { headerName, value } of ids) {
-    emitEvent({
+    void emitEvent({
       requestId: details.requestId,
       url,
       method,

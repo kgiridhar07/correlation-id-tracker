@@ -131,7 +131,7 @@ async function handleCapturePageData(message, sender) {
       valueType: String(payload.valueType || 'string'),
     };
 
-    queueEvent(event);
+    await queueEvent(event);
     incrementBadge();
     broadcastNewEvent(event);
     return { success: true };
