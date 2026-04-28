@@ -22,7 +22,7 @@ For the full project design, architecture, data flow, and roadmap, see [`../PDD.
 - **Badge count** — toolbar badge increments when new IDs are captured and clears with stored events
 - **Interactive dashboard** — total events, unique IDs, duplicate rate, active domains, request/response split, top lists, and last-hour activity
 - **Expanded dashboard tab** — opens the popup experience in a full browser tab for deeper review
-- **Order flow capture** — stitches manual SKU/customer/address/delivery type with Quote ID and milestone correlation IDs
+- **Order flow capture** — stitches timestamp, captured SKUs, customer, address, delivery type, Quote ID, and milestone correlation IDs
 - **Live popup UI** — latest-ID quick view plus search, source, method, domain, time, and duplicate filters
 - **Copy formats** — copy ID, investigation note, or JSON for each event
 - **Manual reports** — generate a clean investigation summary, copy it, or open a prefilled email draft
@@ -181,7 +181,7 @@ Automatic values:
 
 ```text
 Quote ID from [data-testid="order-number"]
-SKU from [data-testid="product-description__sku-number"]
+All seen SKUs from [data-testid="product-description__sku-number"]
 Customer from .customer-card__name .pal--type-style-05
 Address from the fulfillment row labeled DELIVERY ADDRESS
 Delivery Type from the fulfillment row labeled DELIVERY OPTIONS
@@ -192,7 +192,7 @@ Reserve Delivery correlation ID from the matching network request
 
 The built-in DOM values above are scanned from the order page even when URL filters are focused on API paths. Custom page-data watchers still use URL filters.
 
-The Order Flow table combines captured DOM values and matching network header captures on the same line. For each milestone request, `order-tracking-id` is used only as the stitch key and `usom-correlationid` is used as the displayed milestone correlation ID when present.
+The Order Flow table combines captured DOM values and matching network header captures on the same line. Each row includes the latest timestamp for that flow, keeps all unique SKU values seen during capture, uses `order-tracking-id` only as the stitch key, and uses `usom-correlationid` as the displayed milestone correlation ID when present.
 
 Milestone URL matching is configurable in Options. The default milestone patterns are:
 

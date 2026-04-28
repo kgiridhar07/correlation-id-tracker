@@ -146,6 +146,7 @@ function renderOrderFlowRows() {
   for (const row of currentOrderFlowRows) {
     const tableRow = document.createElement('tr');
     [
+      formatFlowTimestamp(row.lastUpdated),
       row.orderTrackingId,
       row.quoteId,
       row.sku,
@@ -415,10 +416,11 @@ async function generateFlowReport() {
 }
 
 function buildOrderFlowTableText(rows) {
-  const headers = ['Order Tracking ID', 'Quote', 'SKU', 'Customer', 'Address', 'Delivery', 'Sourcing Corr', 'Capacity Corr', 'Reserve Corr'];
+  const headers = ['Timestamp', 'Order Tracking ID', 'Quote', 'SKU', 'Customer', 'Address', 'Delivery', 'Sourcing Corr', 'Capacity Corr', 'Reserve Corr'];
   const lines = [headers.join('\t')];
   for (const row of rows) {
     lines.push([
+      formatFlowTimestamp(row.lastUpdated),
       row.orderTrackingId,
       row.quoteId,
       row.sku,
@@ -431,6 +433,10 @@ function buildOrderFlowTableText(rows) {
     ].map((value) => value || '-').join('\t'));
   }
   return lines.join('\n');
+}
+
+function formatFlowTimestamp(timestamp) {
+  return timestamp ? formatTimestamp(timestamp) : '';
 }
 
 function readFlowInputs() {

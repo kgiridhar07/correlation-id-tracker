@@ -113,25 +113,51 @@ function findQuoteId(events) {
 }
 
 function buildBusinessContext(flowState, events) {
+  const skuValues = flowState.sku ? [flowState.sku] : findPageDataValues(events, ['sku'], ['sku-number']);
   return {
-    sku: flowState.sku || findPageDataValue(events, ['sku'], ['sku-number']),
+    sku: skuValues.join(', '),
+    skus: skuValues,
     customer: flowState.customer || findPageDataValue(events, ['customer'], ['customer-card__name']),
     address: flowState.address || findPageDataValue(events, ['address'], ['delivery address']),
     deliveryType: flowState.deliveryType || findPageDataValue(events, ['delivery type', 'delivery options'], ['delivery options', 'delivery-type']),
     quoteId: findQuoteId(events),
+    timestamp: findContextTimestamp(events),
   };
+}
+
+function findPageDataValues(events, labelMatches, pathMatches) {
+  const values = [];
+  const seen = new Set();
+  for (const event of events) {
+    if (!isMatchingPageData(event, labelMatches, pathMatches)) continue;
+    const value = String(event.correlationId || '').trim();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    values.push(value);
+  }
+  return values;
 }
 
 function findPageDataValue(events, labelMatches, pathMatches) {
   const event = [...events].reverse().find((item) => {
-    const label = String(item.fieldLabel || '').toLowerCase();
-    const path = String(item.fieldPath || '').toLowerCase();
-    return item.sourceType === 'page-data' && (
-      labelMatches.some((match) => label.includes(match)) ||
-      pathMatches.some((match) => path.includes(match))
-    );
+    return isMatchingPageData(item, labelMatches, pathMatches);
   });
   return event ? event.correlationId : '';
+}
+
+function isMatchingPageData(event, labelMatches, pathMatches) {
+  const label = String(event.fieldLabel || '').toLowerCase();
+  const path = String(event.fieldPath || '').toLowerCase();
+  return event.sourceType === 'page-data' && (
+    labelMatches.some((match) => label.includes(match)) ||
+    pathMatches.some((match) => path.includes(match))
+  );
+}
+
+function findContextTimestamp(events) {
+  return events
+    .filter((event) => event.sourceType === 'page-data')
+    .reduce((latest, event) => Math.max(latest, event.timestamp || 0), 0);
 }
 
 function assignMilestoneEvents(events, milestones) {
@@ -306,6 +332,7 @@ function ensureFlowRow(rowsByTrackingId, trackingId, context, tabId) {
       orderTrackingId: trackingId,
       tabId,
       sku: context.sku || '',
+      skus: [...(context.skus || [])],
       customer: context.customer || '',
       address: context.address || '',
       deliveryType: context.deliveryType || '',
@@ -313,16 +340,23 @@ function ensureFlowRow(rowsByTrackingId, trackingId, context, tabId) {
       sourcingOptions: null,
       capacity: null,
       reserveDelivery: null,
-      lastUpdated: 0,
+      lastUpdated: context.timestamp || 0,
     });
   }
   const row = rowsByTrackingId.get(key);
   row.sku ||= context.sku || '';
+  row.skus = mergeValues(row.skus || [], context.skus || []);
+  row.sku = row.skus.length ? row.skus.join(', ') : row.sku;
   row.customer ||= context.customer || '';
   row.address ||= context.address || '';
   row.deliveryType ||= context.deliveryType || '';
   row.quoteId ||= context.quoteId || '';
+  row.lastUpdated = Math.max(row.lastUpdated || 0, context.timestamp || 0);
   return row;
+}
+
+function mergeValues(left, right) {
+  return Array.from(new Set([...left, ...right].filter(Boolean)));
 }
 
 function isHeader(event, headerName) {

@@ -245,15 +245,18 @@ test('builds one order flow row from page values and network milestones', () => 
     { requestId: 'r3', correlationId: 'TRACK-1', headerName: 'order-tracking-id', timestamp: now - 800, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/reserveDelivery' },
     { requestId: 'r3', correlationId: 'RES-CORR', headerName: 'usom-correlationid', timestamp: now - 799, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/reserveDelivery' },
     { correlationId: '1003236000', timestamp: now - 700, sourceType: 'page-data', fieldLabel: 'SKU', fieldPath: 'dom:[data-testid="product-description__sku-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/product' },
+    { correlationId: '1003236001', timestamp: now - 695, sourceType: 'page-data', fieldLabel: 'SKU', fieldPath: 'dom:[data-testid="product-description__sku-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/product' },
     { correlationId: 'Rajesh Kumar M1', timestamp: now - 690, sourceType: 'page-data', fieldLabel: 'Customer', fieldPath: 'dom:.customer-card__name .pal--type-style-05', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/customer' },
     { correlationId: 'H9179-307080', timestamp: now - 680, sourceType: 'page-data', fieldLabel: 'Quote ID', fieldPath: 'dom:[data-testid="order-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/quote' },
   ];
   const rows = buildOrderFlowRows(events, {}, milestones);
   assertEqual(rows.length, 1);
   assertEqual(rows[0].orderTrackingId, 'TRACK-1');
-  assertEqual(rows[0].sku, '1003236000');
+  assertEqual(rows[0].sku, '1003236000, 1003236001');
+  assertDeepEqual(rows[0].skus, ['1003236000', '1003236001']);
   assertEqual(rows[0].customer, 'Rajesh Kumar M1');
   assertEqual(rows[0].quoteId, 'H9179-307080');
+  assertEqual(rows[0].lastUpdated, now - 680);
   assertEqual(rows[0].sourcingOptions.correlationId, 'SRC-CORR');
   assertEqual(rows[0].capacity.correlationId, 'CAP-CORR');
   assertEqual(rows[0].reserveDelivery.correlationId, 'RES-CORR');

@@ -35,6 +35,7 @@
         <table class="flow-table">
           <thead>
             <tr>
+              <th>Timestamp</th>
               <th>Order Tracking ID</th>
               <th>Quote</th>
               <th>SKU</th>
@@ -50,6 +51,54 @@
         </table>
       </div>
       <p id="orderFlowEmpty" class="flow-empty">No stitched order flow yet.</p>
+    </section>
+
+    <section class="dashboard" aria-label="Capture analytics">
+      <div class="metric-grid">
+        <div class="metric-card">
+          <span>Total events</span>
+          <strong id="metricTotal">0</strong>
+        </div>
+        <div class="metric-card">
+          <span>Unique values</span>
+          <strong id="metricUnique">0</strong>
+        </div>
+        <div class="metric-card">
+          <span>Duplicate rate</span>
+          <strong id="metricDuplicates">0%</strong>
+        </div>
+        <div class="metric-card">
+          <span>Domains</span>
+          <strong id="metricDomains">0</strong>
+        </div>
+        <div class="metric-card wide">
+          <span>Request / Response / Page</span>
+          <strong id="metricSources">0 / 0</strong>
+        </div>
+      </div>
+
+      <div class="insight-strip">
+        <span id="insightText">No captured traffic yet.</span>
+      </div>
+
+      <div class="dashboard-panels">
+        <section class="dash-panel">
+          <h2>Top domains</h2>
+          <div id="topDomainsList" class="rank-list"></div>
+        </section>
+        <section class="dash-panel">
+          <h2>Methods</h2>
+          <div id="topMethodsList" class="rank-list"></div>
+        </section>
+        <section class="dash-panel">
+          <h2>Repeated values</h2>
+          <div id="topDuplicatesList" class="rank-list"></div>
+        </section>
+        <section class="dash-panel activity-panel">
+          <h2>Last hour</h2>
+          <div id="activityBars" class="activity-bars"></div>
+        </section>
+      </div>
     </section>
 
     <section id="reportPanel" class="report-panel" hidden>

@@ -353,12 +353,12 @@ Email behavior:
 
 ### Order Flow Table
 
-Order flow rows combine captured page values with matching network events from the current captured event set. Rows are keyed by the shared `order-tracking-id` header.
+Order flow rows combine captured page values with matching network events from the current captured event set. Rows include the latest flow timestamp and are keyed by the shared `order-tracking-id` header.
 
 Automatic values:
 
 - Quote ID from `[data-testid="order-number"]`.
-- SKU from `[data-testid="product-description__sku-number"]`.
+- All unique SKUs seen from `[data-testid="product-description__sku-number"]`.
 - Customer from `.customer-card__name .pal--type-style-05`.
 - Address from the fulfillment row labeled `DELIVERY ADDRESS`.
 - Delivery Type from the fulfillment row labeled `DELIVERY OPTIONS`.
