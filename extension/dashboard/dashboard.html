@@ -21,18 +21,6 @@
   </header>
 
   <main>
-    <section id="latestPanel" class="latest-panel" hidden>
-      <div>
-        <span class="latest-label">Latest captured value</span>
-        <strong id="latestId"></strong>
-        <span id="latestMeta"></span>
-      </div>
-      <div class="latest-actions">
-        <button id="btnCopyLatestId">Copy ID</button>
-        <button id="btnCopyLatestNote">Copy Note</button>
-      </div>
-    </section>
-
     <section class="flow-panel" aria-label="Order flow capture">
       <div class="flow-header">
         <div>
@@ -64,83 +52,11 @@
       <p id="orderFlowEmpty" class="flow-empty">No stitched order flow yet.</p>
     </section>
 
-    <section class="dashboard" aria-label="Correlation dashboard">
-      <div class="metric-grid">
-        <div class="metric-card">
-          <span>Total events</span>
-          <strong id="metricTotal">0</strong>
-        </div>
-        <div class="metric-card">
-          <span>Unique IDs</span>
-          <strong id="metricUnique">0</strong>
-        </div>
-        <div class="metric-card">
-          <span>Duplicate rate</span>
-          <strong id="metricDuplicates">0%</strong>
-        </div>
-        <div class="metric-card">
-          <span>Domains</span>
-          <strong id="metricDomains">0</strong>
-        </div>
-        <div class="metric-card wide">
-          <span>Request / Response / Page</span>
-          <strong id="metricSources">0 / 0</strong>
-        </div>
-      </div>
-
-      <div class="insight-strip">
-        <span id="insightText">No captured traffic yet.</span>
-      </div>
-
-      <div class="dashboard-panels">
-        <section class="dash-panel">
-          <h2>Top domains</h2>
-          <div id="topDomainsList" class="rank-list"></div>
-        </section>
-        <section class="dash-panel">
-          <h2>Methods</h2>
-          <div id="topMethodsList" class="rank-list"></div>
-        </section>
-        <section class="dash-panel">
-          <h2>Repeated IDs</h2>
-          <div id="topDuplicatesList" class="rank-list"></div>
-        </section>
-        <section class="dash-panel activity-panel">
-          <h2>Last hour</h2>
-          <div id="activityBars" class="activity-bars"></div>
-        </section>
-      </div>
-    </section>
-
-    <section class="filters" aria-label="Filters">
-      <input type="text" id="searchInput" placeholder="Search ID, URL, method..." autocomplete="off">
-      <select id="sourceFilter" title="Source">
-        <option value="all">All sources</option>
-        <option value="request-header">Request</option>
-        <option value="response-header">Response</option>
-        <option value="page-data">Page data</option>
-      </select>
-      <select id="methodFilter" title="Method">
-        <option value="all">All methods</option>
-      </select>
-      <select id="domainFilter" title="Domain">
-        <option value="all">All domains</option>
-      </select>
-      <select id="timeFilter" title="Time range">
-        <option value="all">All time</option>
-        <option value="15">Last 15m</option>
-        <option value="60">Last 1h</option>
-        <option value="1440">Last 24h</option>
-      </select>
-      <label class="toggle"><input type="checkbox" id="duplicateOnly"> Duplicates</label>
-      <label class="toggle"><input type="checkbox" id="collapseDuplicates"> Collapse</label>
-    </section>
-
     <section id="reportPanel" class="report-panel" hidden>
       <div class="report-header">
         <div>
           <h2>Generated report</h2>
-          <p id="reportMeta">Uses the current dashboard filters.</p>
+          <p id="reportMeta">Uses all captured events.</p>
         </div>
         <div class="report-actions">
           <button id="btnCopyReport">Copy Report</button>
@@ -151,24 +67,6 @@
       <textarea id="reportPreview" rows="12" readonly spellcheck="false"></textarea>
     </section>
 
-    <div class="table-wrap">
-      <table id="eventsTable">
-        <thead>
-          <tr>
-            <th>Timestamp</th>
-            <th>Method</th>
-            <th>Domain</th>
-            <th>URL</th>
-            <th>Captured Value</th>
-            <th>Count</th>
-            <th>Source</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="eventsBody"></tbody>
-      </table>
-    </div>
-    <p id="emptyState" class="empty-state" hidden>No correlation events captured yet.</p>
   </main>
 
   <footer class="footer">

@@ -12,13 +12,13 @@ import { initRenderer, renderEvents, prependEvent } from './tableRenderer.js';
 
 const FLOW_STORAGE_KEY = 'correlationTrackerOrderFlow';
 
-const searchInput = document.getElementById('searchInput');
-const sourceFilter = document.getElementById('sourceFilter');
-const methodFilter = document.getElementById('methodFilter');
-const domainFilter = document.getElementById('domainFilter');
-const timeFilter = document.getElementById('timeFilter');
-const duplicateOnly = document.getElementById('duplicateOnly');
-const collapseDuplicates = document.getElementById('collapseDuplicates');
+const searchInput = document.getElementById('searchInput') || fallbackInput('');
+const sourceFilter = document.getElementById('sourceFilter') || fallbackInput('all');
+const methodFilter = document.getElementById('methodFilter') || fallbackInput('all');
+const domainFilter = document.getElementById('domainFilter') || fallbackInput('all');
+const timeFilter = document.getElementById('timeFilter') || fallbackInput('all');
+const duplicateOnly = document.getElementById('duplicateOnly') || fallbackCheckbox(false);
+const collapseDuplicates = document.getElementById('collapseDuplicates') || fallbackCheckbox(false);
 const btnRefresh = document.getElementById('btnRefresh');
 const btnOpenDashboard = document.getElementById('btnOpenDashboard');
 const btnOptions = document.getElementById('btnOptions');
@@ -70,6 +70,23 @@ let currentReport = null;
 let flowState = loadStoredFlowState();
 let activeOrderFlowMilestones = [];
 let currentOrderFlowRows = [];
+const hasRawEventTable = Boolean(eventsBody);
+
+function fallbackInput(value) {
+  return {
+    value,
+    textContent: '',
+    addEventListener: () => {},
+    appendChild: () => {},
+  };
+}
+
+function fallbackCheckbox(checked) {
+  return {
+    checked,
+    addEventListener: () => {},
+  };
+}
 
 async function loadEvents() {
   setStatus('Loading...');
@@ -115,7 +132,7 @@ function refreshDerivedState() {
   }
 
   eventMap = new Map(visibleEvents.map((event) => [getEventKey(event), event]));
-  renderEvents(visibleEvents);
+  if (hasRawEventTable) renderEvents(visibleEvents);
   renderOrderFlowRows();
   updateDashboard(enrichedEvents);
   updateStats();
@@ -155,6 +172,7 @@ function renderOrderFlowRows() {
 }
 
 function updateDashboard(events) {
+  if (!metricTotal) return;
   const summary = summarizeEvents(events);
   metricTotal.textContent = formatNumber(summary.totalEvents);
   metricUnique.textContent = formatNumber(summary.uniqueIds);
@@ -169,6 +187,7 @@ function updateDashboard(events) {
 }
 
 function renderRankList(container, items) {
+  if (!container) return;
   container.textContent = '';
   if (!items.length) {
     const empty = document.createElement('span');
@@ -205,6 +224,7 @@ function renderRankList(container, items) {
 }
 
 function renderActivityBars(buckets) {
+  if (!activityBars) return;
   activityBars.textContent = '';
   const maxCount = Math.max(...buckets.map((bucket) => bucket.count), 1);
   for (const bucket of buckets) {
@@ -249,6 +269,7 @@ function uniqueValues(events, mapper) {
 }
 
 function updateSelectOptions(select, allLabel, values) {
+  if (!select || typeof select.appendChild !== 'function') return;
   const currentValue = select.value;
   select.textContent = '';
   select.appendChild(new Option(allLabel, 'all'));
@@ -312,12 +333,12 @@ function buildExportMetadata(events) {
     uniqueIds: new Set(events.map((event) => event.correlationId)).size,
     activeFilters: {
       search: searchInput.value || '',
-      source: sourceFilter.value,
-      method: methodFilter.value,
-      domain: domainFilter.value,
-      timeMinutes: timeFilter.value,
-      duplicateOnly: duplicateOnly.checked,
-      collapseDuplicates: collapseDuplicates.checked,
+      source: sourceFilter.value || 'all',
+      method: methodFilter.value || 'all',
+      domain: domainFilter.value || 'all',
+      timeMinutes: timeFilter.value || 'all',
+      duplicateOnly: Boolean(duplicateOnly.checked),
+      collapseDuplicates: Boolean(collapseDuplicates.checked),
     },
   };
 }
@@ -515,6 +536,7 @@ function flashButton(button) {
 }
 
 function updateLatestPanel() {
+  if (!latestPanel) return;
   latestPanel.hidden = !latestEvent;
   if (!latestEvent) return;
   latestId.textContent = latestEvent.correlationId;
@@ -540,7 +562,7 @@ function onMessage(message) {
         debouncedRefresh();
       } else {
         const enriched = enrichDuplicateCounts(allEvents)[0];
-        prependEvent(enriched);
+        if (hasRawEventTable) prependEvent(enriched);
         visibleEvents.unshift(enriched);
         eventMap.set(getEventKey(enriched), enriched);
         updateStats();
@@ -603,7 +625,7 @@ function downloadBlob(blob, filename) {
 
 const debouncedRefresh = debounce(refreshDerivedState, UI.DEBOUNCE_MS);
 
-initRenderer(eventsBody, emptyState);
+if (hasRawEventTable) initRenderer(eventsBody, emptyState);
 updateFlowUi();
 loadEvents();
 attachListeners();
@@ -630,9 +652,9 @@ function attachListeners() {
   btnCloseReport.addEventListener('click', closeReport);
   btnExportJson.addEventListener('click', exportJson);
   btnExportCsv.addEventListener('click', exportCsv);
-  btnCopyLatestId.addEventListener('click', () => latestEvent && copyEvent(latestEvent, 'id'));
-  btnCopyLatestNote.addEventListener('click', () => latestEvent && copyEvent(latestEvent, 'note'));
-  eventsBody.addEventListener('click', handleTableClick);
+  if (btnCopyLatestId) btnCopyLatestId.addEventListener('click', () => latestEvent && copyEvent(latestEvent, 'id'));
+  if (btnCopyLatestNote) btnCopyLatestNote.addEventListener('click', () => latestEvent && copyEvent(latestEvent, 'note'));
+  if (eventsBody) eventsBody.addEventListener('click', handleTableClick);
   getExtensionApi().runtime.onMessage.addListener(onMessage);
 }
 
