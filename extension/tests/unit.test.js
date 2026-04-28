@@ -13,14 +13,15 @@ let failed = 0;
 
 test('extracts configured correlation headers case-insensitively', () => {
   const ids = extractCorrelationIds([
-    { name: 'X-Correlation-ID', value: 'abc-123' },
     { name: 'Order-Tracking-ID', value: 'order-track-123' },
+    { name: 'USOM-CorrelationID', value: 'usom-corr-123' },
     { name: 'content-type', value: 'application/json' },
   ]);
   assertEqual(ids.length, 2);
-  assertEqual(ids[0].value, 'abc-123');
-  assertEqual(ids[1].headerName, 'order-tracking-id');
-  assertEqual(ids[1].value, 'order-track-123');
+  assertEqual(ids[0].headerName, 'order-tracking-id');
+  assertEqual(ids[0].value, 'order-track-123');
+  assertEqual(ids[1].headerName, 'usom-correlationid');
+  assertEqual(ids[1].value, 'usom-corr-123');
 });
 
 test('starts with empty URL filters until configured', () => {
@@ -209,7 +210,7 @@ test('uses the most specific milestone pattern for overlapping URLs', () => {
   assertEqual(capacitySection.includes('capacity-only'), true);
 });
 
-test('prefers order tracking ID for stitched milestone events', () => {
+test('prefers usom correlation ID for stitched milestone events', () => {
   const now = 1000000;
   const milestones = normalizeOrderFlowMilestones([
     'Sourcing Options | sourcingOptions',
@@ -224,9 +225,9 @@ test('prefers order tracking ID for stitched milestone events', () => {
   const sourcingIndex = report.body.indexOf('Sourcing Options:');
   const capacityIndex = report.body.indexOf('Capacity:');
   const sourcingSection = report.body.slice(sourcingIndex, capacityIndex);
-  assertEqual(sourcingSection.includes('shared-order-tracking'), true);
-  assertEqual(sourcingSection.includes('Header: order-tracking-id'), true);
-  assertEqual(sourcingSection.includes('per-call-correlation'), false);
+  assertEqual(sourcingSection.includes('per-call-correlation'), true);
+  assertEqual(sourcingSection.includes('Header: usom-correlationid'), true);
+  assertEqual(sourcingSection.includes('shared-order-tracking'), false);
 });
 
 test('builds one order flow row from page values and network milestones', () => {

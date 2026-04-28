@@ -366,7 +366,7 @@ Automatic values:
 - Capacity correlation ID from the matching network request.
 - Reserve Delivery correlation ID from the matching network request.
 
-When multiple configured headers are present on a matching milestone request, the row uses `order-tracking-id` as the stitch key and prefers `usom-correlationid` as the milestone correlation ID.
+When both configured headers are present on a matching milestone request, the row uses `order-tracking-id` only as the stitch key and uses `usom-correlationid` as the displayed milestone correlation ID.
 
 Built-in DOM values are scanned from the order page independently of API URL filters so business context can still populate when URL filters are tuned for network endpoints. Custom page-data watchers continue to use URL filters.
 

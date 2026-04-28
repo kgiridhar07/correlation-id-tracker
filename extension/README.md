@@ -130,7 +130,7 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `urlFilters` | `[]` | URL substrings to match; configure these in Options before capturing network headers |
-| `correlationHeaders` | `['x-correlation-id', 'order-tracking-id', ...]` | Header names to extract |
+| `correlationHeaders` | `['order-tracking-id', 'usom-correlationid']` | Header names to extract for order-flow stitching |
 | `pageDataWatchers` | `[]` | Page global paths to capture |
 | `pageDataPollMs` | `1,000` | Page-data polling interval |
 | `pageDataDurationSeconds` | `120` | How long to poll after page load |
@@ -192,7 +192,7 @@ Reserve Delivery correlation ID from the matching network request
 
 The built-in DOM values above are scanned from the order page even when URL filters are focused on API paths. Custom page-data watchers still use URL filters.
 
-The Order Flow table combines captured DOM values and matching network header captures on the same line. For each milestone request, `order-tracking-id` is used as the stitch key and `usom-correlationid` is used as the milestone correlation ID when present.
+The Order Flow table combines captured DOM values and matching network header captures on the same line. For each milestone request, `order-tracking-id` is used only as the stitch key and `usom-correlationid` is used as the displayed milestone correlation ID when present.
 
 Milestone URL matching is configurable in Options. The default milestone patterns are:
 
@@ -253,7 +253,10 @@ Use `fetch()` in the browser console to generate matching requests:
 
 ```js
 fetch('https://example.com/api/test', {
-  headers: { 'x-correlation-id': 'test-corr-123' }
+  headers: {
+    'order-tracking-id': 'TRACK-123',
+    'usom-correlationid': 'test-corr-123'
+  }
 });
 ```
 

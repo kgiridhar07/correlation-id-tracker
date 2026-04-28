@@ -183,7 +183,7 @@ function compareMilestoneEvents(a, b) {
 }
 
 function getHeaderPreference(event) {
-  return String(event.headerName || '').toLowerCase() === 'order-tracking-id' ? 1 : 0;
+  return String(event.headerName || '').toLowerCase() === 'usom-correlationid' ? 1 : 0;
 }
 
 function formatWindow(flowState, now) {
