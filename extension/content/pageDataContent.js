@@ -49,8 +49,8 @@
     if (!response || !response.success) return;
     activeConfig = response.data;
 
-    if (!shouldCapture(location.href, activeConfig)) return;
-    ensureBridge();
+    if (!shouldCaptureDom(location.href, activeConfig) && !shouldCapturePageGlobals(location.href, activeConfig)) return;
+    if (shouldCapturePageGlobals(location.href, activeConfig)) ensureBridge();
     scanOnce();
 
     activeTimer = setInterval(scanOnce, activeConfig.pageDataPollMs || DEFAULT_POLL_MS);
@@ -67,8 +67,16 @@
   }
 
   function shouldCapture(url, config) {
+    return shouldCaptureDom(url, config) || shouldCapturePageGlobals(url, config);
+  }
+
+  function shouldCaptureDom(_url, _config) {
+    return DOM_WATCHERS.length > 0;
+  }
+
+  function shouldCapturePageGlobals(url, config) {
     const watchers = config && Array.isArray(config.pageDataWatchers) ? config.pageDataWatchers : [];
-    if (!watchers.length && DOM_WATCHERS.length === 0) return false;
+    if (!watchers.length) return false;
     const lowerUrl = String(url || '').toLowerCase();
     const filters = Array.isArray(config.urlFilters) ? config.urlFilters : [];
     return filters.some((filter) => lowerUrl.includes(String(filter).toLowerCase()));
@@ -85,13 +93,17 @@
 
   function scanOnce() {
     if (!activeConfig || !shouldCapture(location.href, activeConfig)) return;
-    scanDomWatchers().catch(() => undefined);
-    window.postMessage({
-      source: CONTENT_SOURCE,
-      type: 'SCAN_PAGE_DATA',
-      requestId: `scan-${Date.now()}-${scanSequence++}`,
-      watchers: activeConfig.pageDataWatchers,
-    }, '*');
+    if (shouldCaptureDom(location.href, activeConfig)) {
+      scanDomWatchers().catch(() => undefined);
+    }
+    if (shouldCapturePageGlobals(location.href, activeConfig)) {
+      window.postMessage({
+        source: CONTENT_SOURCE,
+        type: 'SCAN_PAGE_DATA',
+        requestId: `scan-${Date.now()}-${scanSequence++}`,
+        watchers: activeConfig.pageDataWatchers,
+      }, '*');
+    }
   }
 
   async function scanDomWatchers() {
@@ -144,7 +156,8 @@
   }
 
   function normalizeText(value) {
-    return String(value || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+    const normalized = String(value || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+    return /^[-\s]+$/.test(normalized) ? '' : normalized;
   }
 
   function checkUrlChange() {

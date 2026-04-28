@@ -200,6 +200,8 @@ Capacity correlation IDs from URLs containing capacity
 Reserve Delivery correlation IDs from URLs containing reserve-delivery or reserve
 ```
 
+The built-in DOM values above are scanned from the order page even when URL filters are focused on API paths. Custom page-data watchers still use URL filters.
+
 The flow report combines optional manual overrides, captured DOM values, and matching network header captures into one stitched timeline. Manual fields still override captured page values when typed.
 
 Milestone URL matching is configurable in Options. Use one line per milestone:

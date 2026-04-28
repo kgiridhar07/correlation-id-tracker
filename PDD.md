@@ -376,6 +376,8 @@ Automatic values:
 
 When multiple configured headers are present on a matching milestone request, reports prefer `order-tracking-id` because it is common across the three order-flow calls.
 
+Built-in DOM values are scanned from the order page independently of API URL filters so business context can still populate when URL filters are tuned for network endpoints. Custom page-data watchers continue to use URL filters.
+
 Milestone URL patterns are user-configurable in Options with this format:
 
 ```text
