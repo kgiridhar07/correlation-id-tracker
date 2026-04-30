@@ -18,15 +18,11 @@ For the full project design, architecture, data flow, and roadmap, see [`../PDD.
 - **Batched writes** — queues events and flushes periodically to reduce I/O
 - **Automatic cleanup** — retention-based eviction (24h default) with scheduled cleanup
 - **Ring-buffer eviction** — bounded in-memory pending map prevents memory leaks
-- **Duplicate detection** — duplicate counts, duplicate-only filtering, and duplicate collapse mode
 - **Badge count** — toolbar badge increments when new IDs are captured and clears with stored events
-- **Interactive dashboard** — total events, unique IDs, duplicate rate, active domains, request/response split, top lists, and last-hour activity
-- **Expanded dashboard tab** — opens the popup experience in a full browser tab for deeper review
 - **Order flow capture** — stitches timestamp, captured SKUs, customer, address, delivery type, Quote ID, and milestone correlation IDs
-- **Live popup UI** — latest-ID quick view plus search, source, method, domain, time, and duplicate filters
-- **Copy formats** — copy ID, investigation note, or JSON for each event
-- **Manual reports** — generate a clean investigation summary, copy it, or open a prefilled email draft
-- **Export** — JSON and CSV export with metadata such as browser, export time, counts, and active filters
+- **Live popup UI** — latest-ID quick view and a selectable stitched order-flow table
+- **Manual reports** — generate a clean order-flow table from selected rows, copy it, or open a prefilled email draft
+- **Export** — JSON and CSV export selected order-flow rows with date and timestamp fields
 - **Dark theme** — lightweight, VSCode-inspired dark UI
 
 ---
@@ -50,7 +46,6 @@ extension/
 │   ├── popup.js               # Popup controller
 │   ├── popup.css              # Dark theme styles
 │   └── tableRenderer.js       # DOM rendering logic
-├── dashboard/                 # Expanded full-tab dashboard
 ├── utils/
 │   ├── constants.js           # All config constants
 │   ├── logger.js              # Level-gated logger
@@ -108,17 +103,14 @@ Firefox support uses the shared WebExtension API wrapper in `utils/browserApi.js
 ## Usage
 
 1. **Browse normally** — the extension silently monitors matching network traffic in the background.
-2. **Click the extension icon** to open the popup dashboard.
+2. **Click the extension icon** to open the popup.
 3. **Read the order-flow row** — the Order Flow table stitches page values and the three network correlation IDs by shared `order-tracking-id`.
-4. **Open expanded view** — click "Open" in the popup to launch the same dashboard in a full browser tab.
-5. **Capture an order flow** — clear old events, perform the ordering steps, then review the Order Flow row. Use "Copy Flow" to copy the stitched row.
-6. **Use latest ID** — copy the newest ID or a ready-to-paste investigation note from the top panel.
-7. **Filter** — narrow by search text, source, method, domain, time range, or duplicate status.
-8. **Copy** — copy an event as ID, note, or JSON from the Actions column.
-9. **Report** — click "Report" to generate a bounded summary from the current popup filters, then copy it or open an email draft.
-10. **Export** — click "JSON" or "CSV" to download all captured events with metadata.
-11. **Configure** — click the gear button to edit URL filters, milestone URL patterns, report recipients, retention, and max saved events.
-12. **Clear** — click the trash icon to wipe stored events and reset the badge.
+4. **Capture an order flow** — clear old events, perform the ordering steps, then review the Order Flow row.
+5. **Select rows** — check the order-flow rows to include in Report, JSON, or CSV. If no rows are checked, all rows are included.
+6. **Report** — click "Report" to generate a clean order-flow table, then copy it or open an email draft.
+7. **Export** — click "JSON" or "CSV" to download selected order-flow rows with date and timestamp fields.
+8. **Configure** — click the gear button to edit URL filters, milestone URL patterns, report recipients, retention, and max saved events.
+9. **Clear** — click the trash icon to wipe stored events and reset the badge.
 
 ---
 
@@ -148,12 +140,12 @@ Strict order-flow mode captures only the built-in page elements used by the stit
 
 The popup report workflow is intentionally manual and reviewable:
 
-1. Filter the popup to the time range, source, domain, or search term you care about.
+1. Select the order-flow rows to include, or leave all rows unchecked to include every row.
 2. Click **Report**.
-3. Review the generated summary.
+3. Review the generated order-flow table.
 4. Click **Copy Report** for chat/ticket workflows or **Send Email Draft** to open a prefilled email.
 
-Reports summarize large captures instead of dumping every row. They include totals, request/response/page-data counts, top domains, top methods, repeated values, recent page-data values, and a latest-event sample. Use JSON/CSV export when the recipient needs the full raw dataset.
+Reports include only Timestamp, Date, Order Tracking ID, Quote, SKU, Customer, Address, Delivery, Sourcing Corr, Capacity Corr, and Reserve Corr. JSON and CSV exports use the same selected rows.
 
 Email sending uses `mailto:` and opens a draft in the user's configured email client. The extension does not store email passwords, API keys, SMTP credentials, or email provider secrets.
 
@@ -229,7 +221,7 @@ When `order-tracking-id` is shared across Sourcing Options, Capacity, and Reserv
 
 ### Unit Tests
 
-Open `extension/tests/test-runner.html` as an extension page after loading the unpacked extension. It covers header extraction, URL filtering, config normalization, page-data watcher parsing, duplicate handling, duplicate collapse, dashboard summaries, report generation, and CSV escaping.
+Open `extension/tests/test-runner.html` as an extension page after loading the unpacked extension. It covers header extraction, URL filtering, config normalization, page-data watcher parsing, duplicate handling, order-flow stitching, and CSV escaping.
 
 ### Simulated Traffic
 
@@ -267,8 +259,8 @@ fetch('https://example.com/api/test', {
 - Does **not** capture request bodies
 - Does **not** capture response bodies
 - Does **not** intentionally store auth tokens, cookies, or PII
-- Captures only configured header names
-- Captures only configured page-data paths on matching URLs
+- Captures only `order-tracking-id` and `usom-correlationid` on matching milestone URLs
+- Captures only the built-in order-flow page elements
 - No data leaves the browser — all storage is local IndexedDB
 - Options are stored locally with extension storage
 - Exports are user-initiated downloads only
@@ -281,7 +273,6 @@ fetch('https://example.com/api/test', {
 - DevTools panel for richer debugging
 - WebSocket traffic inspection
 - Correlation chain tracing (link related IDs across requests)
-- Statistics dashboard (requests/min, top endpoints)
 - Optional auto-copy latest correlation ID to clipboard
 
 ---

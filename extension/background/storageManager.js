@@ -202,21 +202,6 @@ export async function getAllEvents() {
 }
 
 /**
- * Return aggregate storage stats for the popup.
- * @returns {Promise<Object>}
- */
-export async function getStats() {
-  const events = await getAllEvents();
-  const uniqueIds = new Set(events.map((event) => event.correlationId)).size;
-  return {
-    totalEvents: events.length,
-    uniqueIds,
-    maxEvents: getMaxEvents(),
-    newestTimestamp: events[0] ? events[0].timestamp : null,
-  };
-}
-
-/**
  * Delete all stored events.
  * @returns {Promise<void>}
  */

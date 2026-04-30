@@ -6,7 +6,7 @@
 import { MSG, SOURCE_TYPES } from '../utils/constants.js';
 import { addRuntimeMessageListener, sendRuntimeMessage } from '../utils/browserApi.js';
 import { loadConfig, saveConfig } from '../utils/configManager.js';
-import { getEvents, getAllEvents, getStats, clearAllEvents, trimToMaxEvents, queueEvent } from './storageManager.js';
+import { getEvents, getAllEvents, clearAllEvents, trimToMaxEvents, queueEvent } from './storageManager.js';
 import { clearBadge, incrementBadge } from './badgeManager.js';
 import * as log from '../utils/logger.js';
 
@@ -37,9 +37,6 @@ async function handleMessage(message, sender) {
 
     case MSG.SAVE_CONFIG:
       return handleSaveConfig(message);
-
-    case MSG.GET_STATS:
-      return handleGetStats();
 
     case MSG.CAPTURE_PAGE_DATA:
       return handleCapturePageData(message, sender);
@@ -98,16 +95,6 @@ async function handleSaveConfig(message) {
     return { success: true, data: config };
   } catch (err) {
     log.error('SAVE_CONFIG failed', err);
-    return { success: false, error: err.message };
-  }
-}
-
-async function handleGetStats() {
-  try {
-    const stats = await getStats();
-    return { success: true, data: stats };
-  } catch (err) {
-    log.error('GET_STATS failed', err);
     return { success: false, error: err.message };
   }
 }

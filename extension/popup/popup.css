@@ -295,6 +295,18 @@ main {
   white-space: nowrap;
 }
 
+.flow-table .flow-select {
+  width: 54px;
+  text-align: center;
+}
+
+.flow-row-select {
+  width: 16px;
+  height: 16px;
+  accent-color: #569cd6;
+  cursor: pointer;
+}
+
 .flow-table .flow-code,
 .flow-table .flow-sku {
   font-family: Consolas, 'Courier New', monospace;
@@ -323,134 +335,6 @@ main {
   margin-top: 6px;
   color: #b8b09a;
   font-size: 11px;
-}
-
-.dashboard {
-  padding: 10px 14px;
-  background: #1b1b1c;
-  border-bottom: 1px solid #333;
-  flex-shrink: 0;
-}
-
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.metric-card {
-  min-width: 0;
-  border: 1px solid #353535;
-  border-radius: 6px;
-  background: #252526;
-  padding: 8px 10px;
-}
-
-.metric-card.wide {
-  grid-column: span 2;
-}
-
-.metric-card span,
-.dash-panel h2 {
-  display: block;
-  margin: 0 0 4px;
-  color: #9cdcfe;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.metric-card strong {
-  display: block;
-  color: #fff3b0;
-  font-size: 20px;
-  line-height: 1.1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.insight-strip {
-  margin-top: 8px;
-  border-left: 3px solid #0e639c;
-  background: #202a31;
-  color: #d7e8f2;
-  padding: 7px 9px;
-  font-size: 12px;
-}
-
-.dashboard-panels {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.dash-panel {
-  min-width: 0;
-  border: 1px solid #333;
-  border-radius: 6px;
-  background: #212122;
-  padding: 8px;
-}
-
-.rank-list {
-  display: grid;
-  gap: 5px;
-}
-
-.rank-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  color: #d4d4d4;
-  font-size: 11px;
-}
-
-.rank-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rank-count {
-  color: #b5cea8;
-  font-variant-numeric: tabular-nums;
-}
-
-.rank-bar {
-  grid-column: 1 / -1;
-  height: 4px;
-  border-radius: 999px;
-  background: #333;
-  overflow: hidden;
-}
-
-.rank-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: #0e639c;
-}
-
-.empty-list {
-  color: #777;
-  font-size: 11px;
-}
-
-.activity-bars {
-  height: 72px;
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 3px;
-  align-items: end;
-}
-
-.activity-bar {
-  min-height: 3px;
-  border-radius: 3px 3px 0 0;
-  background: #569cd6;
 }
 
 .table-wrap {
@@ -579,14 +463,6 @@ tr:hover {
     flex-direction: column;
   }
 
-  .metric-grid,
-  .dashboard-panels {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .metric-card.wide {
-    grid-column: span 2;
-  }
 }
 
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */

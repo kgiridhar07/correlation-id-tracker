@@ -1,10 +1,9 @@
 import { extractCorrelationIds, getCaptureHeaderNames } from '../background/correlationExtractor.js';
 import { normalizeConfig } from '../utils/configManager.js';
-import { buildDuplicateCounts, collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
+import { buildDuplicateCounts, collapseByCorrelationId, csvEscape, enrichDuplicateCounts } from '../utils/dataUtils.js';
 import { isRelevantUrl } from '../utils/helpers.js';
 import { buildOrderFlowReport, buildOrderFlowRows, normalizeOrderFlowMilestones } from '../utils/flowUtils.js';
 import { normalizePageDataWatchers, parseDataPath, serializePageValue } from '../utils/pageDataUtils.js';
-import { buildInvestigationReport } from '../utils/reportUtils.js';
 import { clearAllEvents, getAllEvents, queueEvent } from '../background/storageManager.js';
 
 const results = document.getElementById('results');
@@ -95,42 +94,6 @@ test('collapses duplicate IDs to newest visible row', () => {
 
 test('escapes CSV values containing quotes and commas', () => {
   assertEqual(csvEscape('https://example.com/a,"b"'), '"https://example.com/a,""b"""');
-});
-
-test('summarizes dashboard metrics and top lists', () => {
-  const now = 1000000;
-  const events = [
-    { correlationId: 'same', timestamp: now - 60000, sourceType: 'request-header', method: 'GET', url: 'https://api.example.com/orders' },
-    { correlationId: 'same', timestamp: now - 120000, sourceType: 'response-header', method: 'GET', url: 'https://api.example.com/orders' },
-    { correlationId: 'other', timestamp: now - 3000000, sourceType: 'response-header', method: 'POST', url: 'https://shop.example.com/api' },
-    { correlationId: 'cart-123', timestamp: now - 180000, sourceType: 'page-data', method: 'PAGE', url: 'https://shop.example.com/cart' },
-  ];
-  const summary = summarizeEvents(events, now);
-  assertEqual(summary.totalEvents, 4);
-  assertEqual(summary.uniqueIds, 3);
-  assertEqual(summary.duplicateRate, 25);
-  assertEqual(summary.requestCount, 1);
-  assertEqual(summary.responseCount, 2);
-  assertEqual(summary.pageDataCount, 1);
-  assertEqual(summary.topDomains[0].label, 'api.example.com');
-  assertEqual(summary.topMethods[0].label, 'GET');
-  assertEqual(summary.topDuplicateIds[0].label, 'same');
-  assertEqual(summary.recentActivity.reduce((sum, bucket) => sum + bucket.count, 0), 4);
-});
-
-test('builds a bounded investigation report', () => {
-  const now = 1000000;
-  const events = [
-    { correlationId: 'cart-123', timestamp: now - 60000, sourceType: 'page-data', fieldLabel: 'Cart ID', fieldPath: 'digitalData.cart.cartId', method: 'PAGE', url: 'https://shop.example.com/cart' },
-    { correlationId: 'same', timestamp: now - 120000, sourceType: 'response-header', method: 'GET', url: 'https://api.example.com/orders' },
-    { correlationId: 'same', timestamp: now - 180000, sourceType: 'request-header', method: 'GET', url: 'https://api.example.com/orders' },
-  ];
-  const report = buildInvestigationReport(events, { now, scopeLabel: 'Last 15 minutes' });
-  assertEqual(report.subject.includes('api.example.com') || report.subject.includes('shop.example.com'), true);
-  assertEqual(report.body.includes('Correlation Tracker Report'), true);
-  assertEqual(report.body.includes('Cart ID: cart-123'), true);
-  assertEqual(report.body.includes('Recent Event Sample (3 of 3)'), true);
-  assertEqual(report.truncatedBody.length <= report.body.length, true);
 });
 
 test('stitches an order flow report from manual fields and milestones', () => {

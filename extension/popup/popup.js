@@ -4,10 +4,9 @@
 
 import { MSG, UI } from '../utils/constants.js';
 import { getExtensionApi, sendRuntimeMessage } from '../utils/browserApi.js';
-import { collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
+import { csvEscape, enrichDuplicateCounts } from '../utils/dataUtils.js';
 import { debounce, formatTimestamp, getEventKey, getHostname } from '../utils/helpers.js';
-import { buildOrderFlowReport, buildOrderFlowRows } from '../utils/flowUtils.js';
-import { buildInvestigationReport } from '../utils/reportUtils.js';
+import { buildOrderFlowRows } from '../utils/flowUtils.js';
 import { initRenderer, renderEvents, prependEvent } from './tableRenderer.js';
 
 const FLOW_STORAGE_KEY = 'correlationTrackerOrderFlow';
@@ -20,7 +19,6 @@ const timeFilter = document.getElementById('timeFilter') || fallbackInput('all')
 const duplicateOnly = document.getElementById('duplicateOnly') || fallbackCheckbox(false);
 const collapseDuplicates = document.getElementById('collapseDuplicates') || fallbackCheckbox(false);
 const btnRefresh = document.getElementById('btnRefresh');
-const btnOpenDashboard = document.getElementById('btnOpenDashboard');
 const btnOptions = document.getElementById('btnOptions');
 const btnClear = document.getElementById('btnClear');
 const btnGenerateReport = document.getElementById('btnGenerateReport');
@@ -50,26 +48,16 @@ const eventsBody = document.getElementById('eventsBody');
 const emptyState = document.getElementById('emptyState');
 const statusText = document.getElementById('statusText');
 const statsText = document.getElementById('statsText');
-const metricTotal = document.getElementById('metricTotal');
-const metricUnique = document.getElementById('metricUnique');
-const metricDuplicates = document.getElementById('metricDuplicates');
-const metricDomains = document.getElementById('metricDomains');
-const metricSources = document.getElementById('metricSources');
-const insightText = document.getElementById('insightText');
-const topDomainsList = document.getElementById('topDomainsList');
-const topMethodsList = document.getElementById('topMethodsList');
-const topDuplicatesList = document.getElementById('topDuplicatesList');
-const activityBars = document.getElementById('activityBars');
 
 let allEvents = [];
 let visibleEvents = [];
 let latestEvent = null;
-let latestStats = null;
 let eventMap = new Map();
 let currentReport = null;
 let flowState = loadStoredFlowState();
 let activeOrderFlowMilestones = [];
 let currentOrderFlowRows = [];
+let selectedFlowRows = new Set();
 const hasRawEventTable = Boolean(eventsBody);
 
 function fallbackInput(value) {
@@ -91,9 +79,8 @@ function fallbackCheckbox(checked) {
 async function loadEvents() {
   setStatus('Loading...');
   try {
-    const [eventsResponse, statsResponse, configResponse] = await Promise.all([
+    const [eventsResponse, configResponse] = await Promise.all([
       sendMessage({ type: MSG.EXPORT_EVENTS }),
-      sendMessage({ type: MSG.GET_STATS }),
       sendMessage({ type: MSG.GET_CONFIG }),
     ]);
 
@@ -110,11 +97,6 @@ async function loadEvents() {
     } else {
       setStatus('Failed to load events');
     }
-
-    if (statsResponse && statsResponse.success) {
-      latestStats = statsResponse.data;
-      updateStats();
-    }
   } catch (err) {
     setStatus('Error: ' + err.message);
   }
@@ -127,14 +109,9 @@ function refreshDerivedState() {
   updateSelectOptions(domainFilter, 'All domains', uniqueValues(enrichedEvents, (event) => getHostname(event.url)));
 
   visibleEvents = applyFilters(enrichedEvents);
-  if (collapseDuplicates.checked) {
-    visibleEvents = collapseByCorrelationId(visibleEvents);
-  }
-
   eventMap = new Map(visibleEvents.map((event) => [getEventKey(event), event]));
   if (hasRawEventTable) renderEvents(visibleEvents);
   renderOrderFlowRows();
-  updateDashboard(enrichedEvents);
   updateStats();
 }
 
@@ -145,6 +122,19 @@ function renderOrderFlowRows() {
 
   for (const row of currentOrderFlowRows) {
     const tableRow = document.createElement('tr');
+    const rowKey = getFlowRowKey(row);
+    tableRow.dataset.flowRowKey = rowKey;
+
+    const selectCell = document.createElement('td');
+    selectCell.className = 'flow-select';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'flow-row-select';
+    checkbox.checked = selectedFlowRows.has(rowKey);
+    checkbox.setAttribute('aria-label', `Select order flow ${row.orderTrackingId || row.quoteId || rowKey}`);
+    selectCell.appendChild(checkbox);
+    tableRow.appendChild(selectCell);
+
     [
       { value: formatFlowTimestamp(row.lastUpdated), className: 'flow-time' },
       { value: row.orderTrackingId, className: 'flow-code' },
@@ -168,74 +158,8 @@ function renderOrderFlowRows() {
 
   if (orderFlowEmpty) orderFlowEmpty.hidden = currentOrderFlowRows.length > 0;
   if (flowStatus) flowStatus.textContent = currentOrderFlowRows.length
-    ? `${currentOrderFlowRows.length} stitched order flow${currentOrderFlowRows.length === 1 ? '' : 's'}`
+    ? `${currentOrderFlowRows.length} stitched order flow${currentOrderFlowRows.length === 1 ? '' : 's'} - select rows for Report, JSON, or CSV`
     : 'Clear, run the order, then review the stitched row.';
-}
-
-function updateDashboard(events) {
-  if (!metricTotal) return;
-  const summary = summarizeEvents(events);
-  metricTotal.textContent = formatNumber(summary.totalEvents);
-  metricUnique.textContent = formatNumber(summary.uniqueIds);
-  metricDuplicates.textContent = `${summary.duplicateRate}%`;
-  metricDomains.textContent = formatNumber(summary.activeDomains);
-  metricSources.textContent = `${formatNumber(summary.requestCount)} / ${formatNumber(summary.responseCount)} / ${formatNumber(summary.pageDataCount)}`;
-  insightText.textContent = summary.insight;
-  renderRankList(topDomainsList, summary.topDomains);
-  renderRankList(topMethodsList, summary.topMethods);
-  renderRankList(topDuplicatesList, summary.topDuplicateIds);
-  renderActivityBars(summary.recentActivity);
-}
-
-function renderRankList(container, items) {
-  if (!container) return;
-  container.textContent = '';
-  if (!items.length) {
-    const empty = document.createElement('span');
-    empty.className = 'empty-list';
-    empty.textContent = 'No data yet';
-    container.appendChild(empty);
-    return;
-  }
-
-  const maxCount = Math.max(...items.map((item) => item.count), 1);
-  for (const item of items) {
-    const row = document.createElement('div');
-    row.className = 'rank-item';
-
-    const label = document.createElement('span');
-    label.className = 'rank-label';
-    label.textContent = item.label;
-    label.title = item.label;
-
-    const count = document.createElement('span');
-    count.className = 'rank-count';
-    count.textContent = formatNumber(item.count);
-
-    const bar = document.createElement('div');
-    bar.className = 'rank-bar';
-    const fill = document.createElement('div');
-    fill.className = 'rank-fill';
-    fill.style.width = `${Math.max(6, Math.round((item.count / maxCount) * 100))}%`;
-    bar.appendChild(fill);
-
-    row.append(label, count, bar);
-    container.appendChild(row);
-  }
-}
-
-function renderActivityBars(buckets) {
-  if (!activityBars) return;
-  activityBars.textContent = '';
-  const maxCount = Math.max(...buckets.map((bucket) => bucket.count), 1);
-  for (const bucket of buckets) {
-    const bar = document.createElement('div');
-    bar.className = 'activity-bar';
-    bar.title = `${bucket.label}: ${bucket.count} events`;
-    bar.style.height = `${Math.max(3, Math.round((bucket.count / maxCount) * 72))}px`;
-    bar.style.opacity = bucket.count > 0 ? '1' : '0.3';
-    activityBars.appendChild(bar);
-  }
 }
 
 function applyFilters(events) {
@@ -282,73 +206,51 @@ function updateSelectOptions(select, allLabel, values) {
 
 async function exportJson() {
   setStatus('Exporting JSON...');
-  const response = await sendMessage({ type: MSG.EXPORT_EVENTS });
-  if (!response || !response.success) { setStatus('Export failed'); return; }
-
+  const rows = getSelectedFlowRows();
   const payload = {
-    metadata: buildExportMetadata(response.data),
-    events: response.data,
+    metadata: buildFlowExportMetadata(rows),
+    orderFlows: rows.map(flowRowToRecord),
   };
-  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `correlation-events-${Date.now()}.json`);
+  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `order-flow-${Date.now()}.json`);
   setStatus('JSON exported');
 }
 
 async function exportCsv() {
   setStatus('Exporting CSV...');
-  const response = await sendMessage({ type: MSG.EXPORT_EVENTS });
-  if (!response || !response.success) { setStatus('Export failed'); return; }
-
-  const metadata = buildExportMetadata(response.data);
-  const header = 'timestamp,requestId,method,domain,url,capturedValue,sourceType,headerName,fieldLabel,fieldPath,valueType,tabId\n';
-  const rows = response.data.map((event) => [
-    new Date(event.timestamp).toISOString(),
-    event.requestId,
-    event.method,
-    getHostname(event.url),
-    csvEscape(event.url || ''),
-    event.correlationId,
-    event.sourceType,
-    event.headerName || '',
-    csvEscape(event.fieldLabel || ''),
-    csvEscape(event.fieldPath || ''),
-    event.valueType || '',
-    event.tabId,
-  ].join(','));
+  const rows = getSelectedFlowRows();
+  const metadata = buildFlowExportMetadata(rows);
+  const header = getFlowHeaders().join(',') + '\n';
+  const csvRows = rows.map((row) => flowRowToValues(row).map(csvEscape).join(','));
   const preface = [
     `# exportedAt=${metadata.exportedAt}`,
-    `# browser=${metadata.browser}`,
-    `# totalEvents=${metadata.totalEvents}`,
-    `# activeFilters=${JSON.stringify(metadata.activeFilters)}`,
+    `# exportDate=${metadata.exportDate}`,
+    `# selectedRows=${metadata.selectedRows}`,
   ].join('\n');
-  downloadBlob(new Blob([preface + '\n' + header + rows.join('\n')], { type: 'text/csv' }), `correlation-events-${Date.now()}.csv`);
+  downloadBlob(new Blob([preface + '\n' + header + csvRows.join('\n')], { type: 'text/csv' }), `order-flow-${Date.now()}.csv`);
   setStatus('CSV exported');
 }
 
-function buildExportMetadata(events) {
+function buildFlowExportMetadata(rows) {
+  const now = new Date();
   return {
     tool: 'Correlation ID Tracker',
     version: getExtensionApi().runtime.getManifest().version,
-    exportedAt: new Date().toISOString(),
-    browser: navigator.userAgent,
-    totalEvents: events.length,
-    uniqueIds: new Set(events.map((event) => event.correlationId)).size,
-    activeFilters: {
-      search: searchInput.value || '',
-      source: sourceFilter.value || 'all',
-      method: methodFilter.value || 'all',
-      domain: domainFilter.value || 'all',
-      timeMinutes: timeFilter.value || 'all',
-      duplicateOnly: Boolean(duplicateOnly.checked),
-      collapseDuplicates: Boolean(collapseDuplicates.checked),
-    },
+    exportedAt: now.toISOString(),
+    exportDate: now.toLocaleDateString('en-US'),
+    selectedRows: rows.length,
   };
 }
 
 async function generateReport() {
-  const report = buildInvestigationReport(visibleEvents, { scopeLabel: buildScopeLabel() });
-  currentReport = report;
-  reportPreview.value = report.body;
-  reportMeta.textContent = `${visibleEvents.length} filtered events summarized. Full raw data stays in JSON/CSV export.`;
+  const rows = getSelectedFlowRows();
+  const body = buildOrderFlowTableText(rows);
+  currentReport = {
+    subject: `Order Flow Report - ${new Date().toLocaleDateString('en-US')}`,
+    body,
+    truncatedBody: body,
+  };
+  reportPreview.value = body;
+  reportMeta.textContent = `${rows.length} order flow row${rows.length === 1 ? '' : 's'} included. Select rows in the table to control Report, JSON, and CSV.`;
   reportPanel.hidden = false;
   setStatus('Report generated');
 }
@@ -384,25 +286,12 @@ async function getConfig() {
   return response && response.success ? response.data : {};
 }
 
-function buildScopeLabel() {
-  const parts = [];
-  if (searchInput.value.trim()) parts.push(`Search: ${searchInput.value.trim()}`);
-  if (sourceFilter.value !== 'all') parts.push(`Source: ${sourceFilter.value}`);
-  if (methodFilter.value !== 'all') parts.push(`Method: ${methodFilter.value}`);
-  if (domainFilter.value !== 'all') parts.push(`Domain: ${domainFilter.value}`);
-  if (timeFilter.value !== 'all') parts.push(`Last ${timeFilter.value} minutes`);
-  if (duplicateOnly.checked) parts.push('Duplicates only');
-  if (collapseDuplicates.checked) parts.push('Collapsed duplicates');
-  return parts.length ? parts.join(', ') : 'All captured events';
-}
-
 async function generateFlowReport() {
   flowState = readFlowInputs();
   saveFlowState();
   renderOrderFlowRows();
-  const report = currentOrderFlowRows.length
-    ? buildOrderFlowTableText(currentOrderFlowRows)
-    : buildOrderFlowReport(allEvents, flowState, Date.now(), activeOrderFlowMilestones).body;
+  const rows = getSelectedFlowRows();
+  const report = buildOrderFlowTableText(rows);
   currentReport = {
     subject: 'Order Flow Rows',
     body: report,
@@ -410,29 +299,52 @@ async function generateFlowReport() {
   };
   await navigator.clipboard.writeText(report);
   reportPreview.value = report;
-  reportMeta.textContent = `${currentOrderFlowRows.length} stitched order flow rows copied.`;
+  reportMeta.textContent = `${rows.length} order flow row${rows.length === 1 ? '' : 's'} copied.`;
   reportPanel.hidden = false;
   setStatus('Flow copied');
 }
 
 function buildOrderFlowTableText(rows) {
-  const headers = ['Timestamp', 'Order Tracking ID', 'Quote', 'SKU', 'Customer', 'Address', 'Delivery', 'Sourcing Corr', 'Capacity Corr', 'Reserve Corr'];
+  const headers = ['Timestamp', 'Date', 'Order Tracking ID', 'Quote', 'SKU', 'Customer', 'Address', 'Delivery', 'Sourcing Corr', 'Capacity Corr', 'Reserve Corr'];
   const lines = [headers.join('\t')];
   for (const row of rows) {
-    lines.push([
-      formatFlowTimestamp(row.lastUpdated),
-      row.orderTrackingId,
-      row.quoteId,
-      row.sku,
-      row.customer,
-      row.address,
-      row.deliveryType,
-      row.sourcingOptions && row.sourcingOptions.correlationId,
-      row.capacity && row.capacity.correlationId,
-      row.reserveDelivery && row.reserveDelivery.correlationId,
-    ].map((value) => value || '-').join('\t'));
+    lines.push(flowRowToValues(row).map((value) => value || '-').join('\t'));
   }
   return lines.join('\n');
+}
+
+function getSelectedFlowRows() {
+  const selectedRows = currentOrderFlowRows.filter((row) => selectedFlowRows.has(getFlowRowKey(row)));
+  return selectedRows.length ? selectedRows : currentOrderFlowRows;
+}
+
+function getFlowRowKey(row) {
+  return [row.orderTrackingId, row.quoteId, row.firstSeen, row.lastUpdated].join('|');
+}
+
+function getFlowHeaders() {
+  return ['timestamp', 'date', 'orderTrackingId', 'quoteId', 'sku', 'customer', 'address', 'delivery', 'sourcingCorr', 'capacityCorr', 'reserveCorr'];
+}
+
+function flowRowToValues(row) {
+  return [
+    row.lastUpdated ? new Date(row.lastUpdated).toISOString() : '',
+    row.lastUpdated ? new Date(row.lastUpdated).toLocaleDateString('en-US') : '',
+    row.orderTrackingId || '',
+    row.quoteId || '',
+    row.sku || '',
+    row.customer || '',
+    row.address || '',
+    row.deliveryType || '',
+    row.sourcingOptions && row.sourcingOptions.correlationId || '',
+    row.capacity && row.capacity.correlationId || '',
+    row.reserveDelivery && row.reserveDelivery.correlationId || '',
+  ];
+}
+
+function flowRowToRecord(row) {
+  const values = flowRowToValues(row);
+  return Object.fromEntries(getFlowHeaders().map((header, index) => [header, values[index]]));
 }
 
 function formatFlowTimestamp(timestamp) {
@@ -495,7 +407,7 @@ async function clearEvents() {
   if (response && response.success) {
     allEvents = [];
     latestEvent = null;
-    latestStats = null;
+    selectedFlowRows = new Set();
     refreshDerivedState();
     updateLatestPanel();
     setStatus('Events cleared');
@@ -509,6 +421,19 @@ async function handleTableClick(event) {
   if (!targetEvent) return;
   await copyEvent(targetEvent, button.dataset.copyFormat);
   flashButton(button);
+}
+
+function handleOrderFlowChange(event) {
+  const checkbox = event.target.closest('.flow-row-select');
+  if (!checkbox) return;
+  const tableRow = checkbox.closest('tr');
+  if (!tableRow || !tableRow.dataset.flowRowKey) return;
+  if (checkbox.checked) {
+    selectedFlowRows.add(tableRow.dataset.flowRowKey);
+  } else {
+    selectedFlowRows.delete(tableRow.dataset.flowRowKey);
+  }
+  updateStats();
 }
 
 async function copyEvent(event, format) {
@@ -551,9 +476,10 @@ function updateLatestPanel() {
 }
 
 function updateStats() {
-  const total = latestStats ? latestStats.totalEvents : allEvents.length;
-  const unique = latestStats ? latestStats.uniqueIds : new Set(allEvents.map((event) => event.correlationId)).size;
-  statsText.textContent = `${visibleEvents.length} shown - ${total} saved - ${unique} unique`;
+  if (!statsText) return;
+  const selectedCount = currentOrderFlowRows.filter((row) => selectedFlowRows.has(getFlowRowKey(row))).length;
+  const selectedText = selectedCount ? `${selectedCount} selected` : 'all rows by default';
+  statsText.textContent = `${currentOrderFlowRows.length} order flow row${currentOrderFlowRows.length === 1 ? '' : 's'} - ${selectedText}`;
 }
 
 function onMessage(message) {
@@ -577,6 +503,7 @@ function onMessage(message) {
     case MSG.EVENTS_CLEARED:
       allEvents = [];
       latestEvent = null;
+      selectedFlowRows = new Set();
       renderOrderFlowRows();
       refreshDerivedState();
       updateLatestPanel();
@@ -610,16 +537,6 @@ function openOptions() {
   }
 }
 
-function openDashboard() {
-  const extensionApi = getExtensionApi();
-  const url = extensionApi.runtime.getURL('dashboard/dashboard.html');
-  if (extensionApi.tabs && extensionApi.tabs.create) {
-    extensionApi.tabs.create({ url });
-    return;
-  }
-  window.open(url, '_blank');
-}
-
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -645,7 +562,6 @@ function attachListeners() {
   duplicateOnly.addEventListener('change', refreshDerivedState);
   collapseDuplicates.addEventListener('change', refreshDerivedState);
   btnRefresh.addEventListener('click', loadEvents);
-  if (btnOpenDashboard) btnOpenDashboard.addEventListener('click', openDashboard);
   btnOptions.addEventListener('click', openOptions);
   btnClear.addEventListener('click', clearEvents);
   btnGenerateReport.addEventListener('click', generateReport);
@@ -661,9 +577,6 @@ function attachListeners() {
   if (btnCopyLatestId) btnCopyLatestId.addEventListener('click', () => latestEvent && copyEvent(latestEvent, 'id'));
   if (btnCopyLatestNote) btnCopyLatestNote.addEventListener('click', () => latestEvent && copyEvent(latestEvent, 'note'));
   if (eventsBody) eventsBody.addEventListener('click', handleTableClick);
+  if (orderFlowBody) orderFlowBody.addEventListener('change', handleOrderFlowChange);
   getExtensionApi().runtime.onMessage.addListener(onMessage);
-}
-
-function formatNumber(value) {
-  return Number(value || 0).toLocaleString('en-US');
 }
