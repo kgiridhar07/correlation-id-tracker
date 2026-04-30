@@ -27,16 +27,6 @@
       "run_at": "document_idle"
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "content/pageDataBridge.js"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
-  ],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {

@@ -1,12 +1,9 @@
 import { DEFAULT_CONFIG, MSG } from '../utils/constants.js';
 import { sendRuntimeMessage } from '../utils/browserApi.js';
 import { formatOrderFlowMilestoneLines } from '../utils/flowUtils.js';
-import { formatWatcherLines } from '../utils/pageDataUtils.js';
 
 const form = document.getElementById('optionsForm');
 const urlFilters = document.getElementById('urlFilters');
-const correlationHeaders = document.getElementById('correlationHeaders');
-const pageDataWatchers = document.getElementById('pageDataWatchers');
 const orderFlowMilestones = document.getElementById('orderFlowMilestones');
 const reportRecipients = document.getElementById('reportRecipients');
 const maxEvents = document.getElementById('maxEvents');
@@ -54,8 +51,8 @@ async function saveOptions(config) {
 function readForm() {
   return {
     urlFilters: urlFilters.value.split('\n'),
-    correlationHeaders: correlationHeaders.value.split('\n'),
-    pageDataWatchers: pageDataWatchers.value.split('\n'),
+    correlationHeaders: DEFAULT_CONFIG.correlationHeaders,
+    pageDataWatchers: [],
     orderFlowMilestones: orderFlowMilestones.value.split('\n'),
     pageDataPollMs: pageDataPollMs.value,
     pageDataDurationSeconds: pageDataDurationSeconds.value,
@@ -67,8 +64,6 @@ function readForm() {
 
 function fillForm(config) {
   urlFilters.value = config.urlFilters.join('\n');
-  correlationHeaders.value = config.correlationHeaders.join('\n');
-  pageDataWatchers.value = formatWatcherLines(config.pageDataWatchers || []);
   orderFlowMilestones.value = formatOrderFlowMilestoneLines(config.orderFlowMilestones || []);
   reportRecipients.value = (config.reportRecipients || []).join('\n');
   pageDataPollMs.value = config.pageDataPollMs;

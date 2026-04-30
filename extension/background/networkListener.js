@@ -10,6 +10,7 @@
 
 import { SOURCE_TYPES, RING_BUFFER } from '../utils/constants.js';
 import { getExtensionApi } from '../utils/browserApi.js';
+import { getConfig } from '../utils/configManager.js';
 import { isRelevantUrl } from '../utils/helpers.js';
 import { extractCorrelationIds } from './correlationExtractor.js';
 import { queueEvent } from './storageManager.js';
@@ -66,7 +67,7 @@ async function emitEvent({ requestId, url, method, correlationId, sourceType, ta
  * @param {Object} details
  */
 function onBeforeSendHeaders(details) {
-  if (!isRelevantUrl(details.url)) return;
+  if (!shouldCaptureOrderFlowRequest(details.url)) return;
 
   const ids = extractCorrelationIds(details.requestHeaders);
 
@@ -97,7 +98,7 @@ function onBeforeSendHeaders(details) {
  * @param {Object} details
  */
 function onHeadersReceived(details) {
-  if (!isRelevantUrl(details.url)) return;
+  if (!shouldCaptureOrderFlowRequest(details.url)) return;
 
   const ids = extractCorrelationIds(details.responseHeaders);
 
@@ -165,4 +166,16 @@ function addWebRequestListener(event, listener, filter, extraInfoSpec) {
     event.addListener(listener, filter, fallbackSpec);
     log.warn('Registered webRequest listener without extraHeaders fallback', err);
   }
+}
+
+function shouldCaptureOrderFlowRequest(url) {
+  return isRelevantUrl(url) && isOrderFlowMilestoneUrl(url);
+}
+
+function isOrderFlowMilestoneUrl(url) {
+  const lowerUrl = String(url || '').toLowerCase();
+  if (!lowerUrl) return false;
+  return getConfig().orderFlowMilestones.some((milestone) => {
+    return milestone.patterns.some((pattern) => lowerUrl.includes(String(pattern).toLowerCase()));
+  });
 }

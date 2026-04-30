@@ -27,8 +27,7 @@ test('extracts configured correlation headers case-insensitively', () => {
 });
 
 test('always includes order-flow headers for capture', () => {
-  assertDeepEqual(getCaptureHeaderNames(['order-tracking-id']), ['order-tracking-id', 'usom-correlationid']);
-  assertDeepEqual(getCaptureHeaderNames(['x-trace-id']), ['x-trace-id', 'order-tracking-id', 'usom-correlationid']);
+  assertDeepEqual(getCaptureHeaderNames(), ['order-tracking-id', 'usom-correlationid']);
 });
 
 test('starts with empty URL filters until configured', () => {

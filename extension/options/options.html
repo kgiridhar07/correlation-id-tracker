@@ -10,7 +10,7 @@
   <main class="shell">
     <header class="page-header">
       <h1>Correlation ID Tracker</h1>
-      <p>Configure capture filters, extra correlation headers, and local retention.</p>
+      <p>Configure capture filters, milestone URL patterns, and local retention.</p>
     </header>
 
     <form id="optionsForm" class="settings-form">
@@ -18,18 +18,6 @@
         <label for="urlFilters">URL filters</label>
         <textarea id="urlFilters" rows="6" spellcheck="false"></textarea>
         <p>One lowercase match per line. Requests must contain at least one value.</p>
-      </section>
-
-      <section class="panel">
-        <label for="correlationHeaders">Extra correlation headers</label>
-        <textarea id="correlationHeaders" rows="6" spellcheck="false"></textarea>
-        <p>One header name per line. Order Flow always captures order-tracking-id and usom-correlationid.</p>
-      </section>
-
-      <section class="panel">
-        <label for="pageDataWatchers">Page data watchers</label>
-        <textarea id="pageDataWatchers" rows="7" spellcheck="false" placeholder="Cart ID | digitalData.cart.cartId"></textarea>
-        <p>One watcher per line: label, pipe, then global path. Examples: Cart ID | digitalData.cart.cartId or Event | dataLayer[0].event.</p>
       </section>
 
       <section class="panel">

@@ -1,7 +1,4 @@
 (function () {
-  const CONTENT_SOURCE = 'CID_TRACKER_CONTENT';
-  const PAGE_SOURCE = 'CID_TRACKER_PAGE';
-  const BRIDGE_ID = 'cid-tracker-page-data-bridge';
   const DEFAULT_POLL_MS = 1000;
   const DEFAULT_DURATION_SECONDS = 120;
   const DOM_WATCHERS = Object.freeze([
@@ -33,7 +30,6 @@
   let lastUrl = location.href;
   let scanSequence = 0;
 
-  window.addEventListener('message', onPageMessage);
   runtime.onMessage.addListener((message) => {
     if (message && message.type === 'CONFIG_UPDATED') {
       loadAndStart();
@@ -49,8 +45,7 @@
     if (!response || !response.success) return;
     activeConfig = response.data;
 
-    if (!shouldCaptureDom(location.href, activeConfig) && !shouldCapturePageGlobals(location.href, activeConfig)) return;
-    if (shouldCapturePageGlobals(location.href, activeConfig)) ensureBridge();
+    if (!shouldCaptureDom(location.href, activeConfig)) return;
     scanOnce();
 
     activeTimer = setInterval(scanOnce, activeConfig.pageDataPollMs || DEFAULT_POLL_MS);
@@ -67,42 +62,17 @@
   }
 
   function shouldCapture(url, config) {
-    return shouldCaptureDom(url, config) || shouldCapturePageGlobals(url, config);
+    return shouldCaptureDom(url, config);
   }
 
   function shouldCaptureDom(_url, _config) {
     return DOM_WATCHERS.length > 0;
   }
 
-  function shouldCapturePageGlobals(url, config) {
-    const watchers = config && Array.isArray(config.pageDataWatchers) ? config.pageDataWatchers : [];
-    if (!watchers.length) return false;
-    const lowerUrl = String(url || '').toLowerCase();
-    const filters = Array.isArray(config.urlFilters) ? config.urlFilters : [];
-    return filters.some((filter) => lowerUrl.includes(String(filter).toLowerCase()));
-  }
-
-  function ensureBridge() {
-    if (document.getElementById(BRIDGE_ID)) return;
-    const script = document.createElement('script');
-    script.id = BRIDGE_ID;
-    script.src = runtime.getURL('content/pageDataBridge.js');
-    script.onload = () => script.remove();
-    (document.documentElement || document.head || document.body).appendChild(script);
-  }
-
   function scanOnce() {
     if (!activeConfig || !shouldCapture(location.href, activeConfig)) return;
     if (shouldCaptureDom(location.href, activeConfig)) {
       scanDomWatchers().catch(() => undefined);
-    }
-    if (shouldCapturePageGlobals(location.href, activeConfig)) {
-      window.postMessage({
-        source: CONTENT_SOURCE,
-        type: 'SCAN_PAGE_DATA',
-        requestId: `scan-${Date.now()}-${scanSequence++}`,
-        watchers: activeConfig.pageDataWatchers,
-      }, '*');
     }
   }
 
@@ -164,30 +134,6 @@
     if (location.href === lastUrl) return;
     lastUrl = location.href;
     loadAndStart();
-  }
-
-  async function onPageMessage(event) {
-    if (event.source !== window) return;
-    const message = event.data;
-    if (!message || message.source !== PAGE_SOURCE || message.type !== 'PAGE_DATA_RESULT') return;
-
-    for (const item of message.values || []) {
-      const key = `${location.href}|${item.path}|${item.value}`;
-      if (lastValues.get(item.path) === key) continue;
-      lastValues.set(item.path, key);
-
-      await sendRuntimeMessage({
-        type: 'CAPTURE_PAGE_DATA',
-        data: {
-          requestId: `${message.requestId}-${item.path}`,
-          url: location.href,
-          label: item.label,
-          path: item.path,
-          value: item.value,
-          valueType: item.valueType,
-        },
-      });
-    }
   }
 
   function sendRuntimeMessage(message) {

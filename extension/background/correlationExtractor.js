@@ -4,15 +4,11 @@
  * Returns all matching correlation IDs found in a single header set.
  */
 
-import { getConfig } from '../utils/configManager.js';
 import { ORDER_FLOW_CAPTURE_HEADERS } from '../utils/constants.js';
 import { isValidHeader } from '../utils/validators.js';
 
-export function getCaptureHeaderNames(configuredHeaders = getConfig().correlationHeaders) {
-  return Array.from(new Set([
-    ...(Array.isArray(configuredHeaders) ? configuredHeaders : []),
-    ...ORDER_FLOW_CAPTURE_HEADERS,
-  ]));
+export function getCaptureHeaderNames() {
+  return [...ORDER_FLOW_CAPTURE_HEADERS];
 }
 
 /**

@@ -12,8 +12,8 @@ For the full project design, architecture, data flow, and roadmap, see [`../PDD.
 
 - **Real-time capture** — intercepts HTTP headers via the WebExtensions `webRequest` API (no DevTools scraping)
 - **Header-only extraction** — scans request and response headers for correlation IDs
-- **Configurable filters** — options page controls URL filters, header names, page-data watchers, retention, and max saved events
-- **Page-data watchers** — captures configured page globals such as `digitalData.cart.cartId` or `dataLayer[0].event`
+- **Configurable filters** — options page controls URL filters, order-flow milestone URL patterns, retention, and max saved events
+- **Built-in page element capture** — captures only Quote ID, SKU, customer, address, and delivery type from the order page
 - **IndexedDB persistence** — events survive browser restarts
 - **Batched writes** — queues events and flushes periodically to reduce I/O
 - **Automatic cleanup** — retention-based eviction (24h default) with scheduled cleanup
@@ -44,8 +44,7 @@ extension/
 │   ├── cleanupManager.js      # Retention cleanup scheduler
 │   └── messageBus.js          # Background ↔ popup messaging
 ├── content/
-│   ├── pageDataContent.js     # Config-driven page-data polling
-│   └── pageDataBridge.js      # Injected page-context reader
+│   ├── pageDataContent.js     # Built-in order-flow page element polling
 ├── popup/
 │   ├── popup.html             # Popup markup
 │   ├── popup.js               # Popup controller
@@ -118,7 +117,7 @@ Firefox support uses the shared WebExtension API wrapper in `utils/browserApi.js
 8. **Copy** — copy an event as ID, note, or JSON from the Actions column.
 9. **Report** — click "Report" to generate a bounded summary from the current popup filters, then copy it or open an email draft.
 10. **Export** — click "JSON" or "CSV" to download all captured events with metadata.
-11. **Configure** — click the gear button to edit URL filters, headers, page-data watchers, report recipients, retention, and max saved events.
+11. **Configure** — click the gear button to edit URL filters, milestone URL patterns, report recipients, retention, and max saved events.
 12. **Clear** — click the trash icon to wipe stored events and reset the badge.
 
 ---
@@ -130,8 +129,8 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `urlFilters` | `[]` | URL substrings to match; configure these in Options before capturing network headers |
-| `correlationHeaders` | `['order-tracking-id', 'usom-correlationid']` | Additional header names to extract for general tracking; order-flow capture always includes `order-tracking-id` and `usom-correlationid` |
-| `pageDataWatchers` | `[]` | Page global paths to capture |
+| `correlationHeaders` | `['order-tracking-id', 'usom-correlationid']` | Legacy setting; order-flow capture is limited to `order-tracking-id` and `usom-correlationid` |
+| `pageDataWatchers` | `[]` | Legacy setting; custom page globals are not captured in strict order-flow mode |
 | `pageDataPollMs` | `1,000` | Page-data polling interval |
 | `pageDataDurationSeconds` | `120` | How long to poll after page load |
 | `reportRecipients` | `[]` | Email recipients used by Send Email Draft |
@@ -141,24 +140,9 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 | `STORAGE_LIMITS.BATCH_MAX_SIZE` | `50` | Force flush threshold |
 | `RING_BUFFER.MAX_PENDING` | `5,000` | Max pending request map entries |
 
-### Page Data Watchers
+### Page Element Capture
 
-Page-data watchers capture values from page-level JavaScript globals. They use the same URL filters as network capture, so add the site or API domain first, then add one watcher per line:
-
-```text
-Cart ID | digitalData.cart.cartId
-Cart ID Legacy | digitalData.cartId
-DataLayer Event | dataLayer[0].event
-Adobe Cart | adobeDataLayer[0].cart.id
-```
-
-The format is:
-
-```text
-Display Label | global.path.to.value
-```
-
-The extension injects a small page-context bridge because browser content scripts cannot directly read page JavaScript variables. It only reads configured paths on matching URLs and stores the resulting value locally as a `page-data` event.
+Strict order-flow mode captures only the built-in page elements used by the stitched row: Quote ID, SKU, customer, address, and delivery type. Custom page globals are ignored so unrelated page values are not stored.
 
 ### Reports And Email Drafts
 
@@ -190,7 +174,7 @@ Capacity correlation ID from the matching network request
 Reserve Delivery correlation ID from the matching network request
 ```
 
-The built-in DOM values above are scanned from the order page even when URL filters are focused on API paths. Custom page-data watchers still use URL filters.
+The built-in DOM values above are scanned from the order page even when URL filters are focused on API paths. Custom page-data watchers are ignored in strict order-flow mode.
 
 The Order Flow table combines captured DOM values and matching network header captures on the same line. Each row includes the latest timestamp for that flow, keeps all unique SKU values seen during capture, uses `order-tracking-id` only as the stitch key, and uses `usom-correlationid` as the displayed milestone correlation ID when present.
 
@@ -208,7 +192,7 @@ You can put multiple patterns on a line with semicolons:
 Sourcing Options | /sourcing-options; /source/options
 ```
 
-The extension still captures IDs from configured network headers. These milestone patterns only tell the Order Flow table which captured network events belong under each step.
+The extension captures only `order-tracking-id` and `usom-correlationid` from URLs matching these milestone patterns. Other matching network traffic is ignored.
 
 When `order-tracking-id` is shared across Sourcing Options, Capacity, and Reserve Delivery, the row can show all three `usom-correlationid` values beside the same SKU/customer/address/delivery/quote data.
 
@@ -225,9 +209,9 @@ When `order-tracking-id` is shared across Sourcing Options, Capacity, and Reserv
   "correlationId": "abc-123-def-456",
   "sourceType": "response-header",
   "headerName": "order-tracking-id",
-  "fieldLabel": "Cart ID",
-  "fieldPath": "digitalData.cart.cartId",
-  "valueType": "string",
+  "fieldLabel": "Quote ID",
+  "fieldPath": "dom:[data-testid=\"order-number\"]",
+  "valueType": "dom-text",
   "tabId": 42
 }
 ```
