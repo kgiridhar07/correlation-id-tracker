@@ -212,7 +212,7 @@ async function exportJson() {
     metadata: buildFlowExportMetadata(rows),
     orderFlows: rows.map(flowRowToRecord),
   };
-  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `order-flow-${Date.now()}.json`);
+  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `${buildExportFileBaseName()}.json`);
   setStatus('JSON exported');
 }
 
@@ -227,8 +227,15 @@ async function exportCsv() {
     `# exportDate=${metadata.exportDate}`,
     `# selectedRows=${metadata.selectedRows}`,
   ].join('\n');
-  downloadBlob(new Blob([preface + '\n' + header + csvRows.join('\n')], { type: 'text/csv' }), `order-flow-${Date.now()}.csv`);
+  downloadBlob(new Blob([preface + '\n' + header + csvRows.join('\n')], { type: 'text/csv' }), `${buildExportFileBaseName()}.csv`);
   setStatus('CSV exported');
+}
+
+function buildExportFileBaseName(now = new Date()) {
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  return `correlation_id_${day}-${month}-${year}-${now.getTime()}`;
 }
 
 function buildFlowExportMetadata(rows) {
