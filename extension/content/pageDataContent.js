@@ -78,29 +78,29 @@
 
   async function scanDomWatchers() {
     for (const watcher of DOM_WATCHERS) {
-      const value = readDomWatcherValue(watcher);
-      if (!value) continue;
-
       const path = buildDomWatcherPath(watcher);
-      const key = `${location.href}|${path}|${value}`;
-      if (lastValues.get(path) === key) continue;
-      lastValues.set(path, key);
+      const values = readDomWatcherValues(watcher);
+      for (const value of values) {
+        const key = `${location.href}|${path}|${value}`;
+        if (lastValues.get(key) === true) continue;
+        lastValues.set(key, true);
 
-      await sendRuntimeMessage({
-        type: 'CAPTURE_PAGE_DATA',
-        data: {
-          requestId: `dom-${Date.now()}-${scanSequence++}`,
-          url: location.href,
-          label: watcher.label,
-          path,
-          value,
-          valueType: 'dom-text',
-        },
-      });
+        await sendRuntimeMessage({
+          type: 'CAPTURE_PAGE_DATA',
+          data: {
+            requestId: `dom-${Date.now()}-${scanSequence++}`,
+            url: location.href,
+            label: watcher.label,
+            path,
+            value,
+            valueType: 'dom-text',
+          },
+        });
+      }
     }
   }
 
-  function readDomWatcherValue(watcher) {
+  function readDomWatcherValues(watcher) {
     if (watcher.labelText && watcher.valueSelector) {
       const containers = document.querySelectorAll(watcher.selector);
       for (const container of containers) {
@@ -109,13 +109,21 @@
         if (!labelText.toLowerCase().includes(watcher.labelText)) continue;
         const valueElement = container.querySelector(watcher.valueSelector);
         const value = normalizeText(valueElement ? valueElement.textContent : '');
-        if (value) return value;
+        if (value) return [value];
       }
-      return '';
+      return [];
     }
 
-    const element = document.querySelector(watcher.selector);
-    return normalizeText(element ? element.textContent : '');
+    const values = [];
+    const seen = new Set();
+    const elements = document.querySelectorAll(watcher.selector);
+    for (const element of elements) {
+      const value = normalizeText(element ? element.textContent : '');
+      if (!value || seen.has(value)) continue;
+      seen.add(value);
+      values.push(value);
+    }
+    return values;
   }
 
   function buildDomWatcherPath(watcher) {

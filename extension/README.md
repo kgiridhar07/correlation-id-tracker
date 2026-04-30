@@ -135,7 +135,7 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 
 ### Page Element Capture
 
-Strict order-flow mode captures only the built-in page elements used by the stitched row: Quote ID, SKU, customer, address, and delivery type. Custom page globals are ignored so unrelated page values are not stored.
+Strict order-flow mode captures only the built-in page elements used by the stitched row: Quote ID, all visible SKUs, customer, address, and delivery type. Custom page globals are ignored so unrelated page values are not stored.
 
 ### Reports And Email Drafts
 
