@@ -9,6 +9,12 @@ export const CORRELATION_HEADERS = Object.freeze([
   'usom-correlationid',
 ]);
 
+/** Headers required by order-flow stitching/display regardless of editable capture headers. */
+export const ORDER_FLOW_CAPTURE_HEADERS = Object.freeze([
+  'order-tracking-id',
+  'usom-correlationid',
+]);
+
 /** URL patterns to filter relevant traffic. Only requests matching at least one pattern are captured. */
 export const URL_FILTERS = Object.freeze([
 ]);

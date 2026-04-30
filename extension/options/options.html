@@ -10,7 +10,7 @@
   <main class="shell">
     <header class="page-header">
       <h1>Correlation ID Tracker</h1>
-      <p>Configure capture filters, correlation headers, and local retention.</p>
+      <p>Configure capture filters, extra correlation headers, and local retention.</p>
     </header>
 
     <form id="optionsForm" class="settings-form">
@@ -21,9 +21,9 @@
       </section>
 
       <section class="panel">
-        <label for="correlationHeaders">Correlation headers</label>
+        <label for="correlationHeaders">Extra correlation headers</label>
         <textarea id="correlationHeaders" rows="6" spellcheck="false"></textarea>
-        <p>One header name per line. Matching is case-insensitive.</p>
+        <p>One header name per line. Order Flow always captures order-tracking-id and usom-correlationid.</p>
       </section>
 
       <section class="panel">

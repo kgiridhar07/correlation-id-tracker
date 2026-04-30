@@ -5,7 +5,15 @@
  */
 
 import { getConfig } from '../utils/configManager.js';
+import { ORDER_FLOW_CAPTURE_HEADERS } from '../utils/constants.js';
 import { isValidHeader } from '../utils/validators.js';
+
+export function getCaptureHeaderNames(configuredHeaders = getConfig().correlationHeaders) {
+  return Array.from(new Set([
+    ...(Array.isArray(configuredHeaders) ? configuredHeaders : []),
+    ...ORDER_FLOW_CAPTURE_HEADERS,
+  ]));
+}
 
 /**
  * Extract all correlation IDs from a webRequest header array.
@@ -15,7 +23,7 @@ import { isValidHeader } from '../utils/validators.js';
 export function extractCorrelationIds(headers) {
   if (!Array.isArray(headers)) return [];
 
-  const headerSet = new Set(getConfig().correlationHeaders);
+  const headerSet = new Set(getCaptureHeaderNames());
   const results = [];
   for (let i = 0; i < headers.length; i++) {
     const header = headers[i];

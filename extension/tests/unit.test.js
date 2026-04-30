@@ -1,4 +1,4 @@
-import { extractCorrelationIds } from '../background/correlationExtractor.js';
+import { extractCorrelationIds, getCaptureHeaderNames } from '../background/correlationExtractor.js';
 import { normalizeConfig } from '../utils/configManager.js';
 import { buildDuplicateCounts, collapseByCorrelationId, csvEscape, enrichDuplicateCounts, summarizeEvents } from '../utils/dataUtils.js';
 import { isRelevantUrl } from '../utils/helpers.js';
@@ -24,6 +24,11 @@ test('extracts configured correlation headers case-insensitively', () => {
   assertEqual(ids[0].value, 'order-track-123');
   assertEqual(ids[1].headerName, 'usom-correlationid');
   assertEqual(ids[1].value, 'usom-corr-123');
+});
+
+test('always includes order-flow headers for capture', () => {
+  assertDeepEqual(getCaptureHeaderNames(['order-tracking-id']), ['order-tracking-id', 'usom-correlationid']);
+  assertDeepEqual(getCaptureHeaderNames(['x-trace-id']), ['x-trace-id', 'order-tracking-id', 'usom-correlationid']);
 });
 
 test('starts with empty URL filters until configured', () => {

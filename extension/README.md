@@ -130,7 +130,7 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `urlFilters` | `[]` | URL substrings to match; configure these in Options before capturing network headers |
-| `correlationHeaders` | `['order-tracking-id', 'usom-correlationid']` | Header names to extract for order-flow stitching |
+| `correlationHeaders` | `['order-tracking-id', 'usom-correlationid']` | Additional header names to extract for general tracking; order-flow capture always includes `order-tracking-id` and `usom-correlationid` |
 | `pageDataWatchers` | `[]` | Page global paths to capture |
 | `pageDataPollMs` | `1,000` | Page-data polling interval |
 | `pageDataDurationSeconds` | `120` | How long to poll after page load |
