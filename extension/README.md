@@ -105,12 +105,13 @@ Firefox support uses the shared WebExtension API wrapper in `utils/browserApi.js
 1. **Browse normally** — the extension silently monitors matching network traffic in the background.
 2. **Click the extension icon** to open the popup.
 3. **Read the order-flow row** — the Order Flow table stitches page values and the three network correlation IDs by shared `order-tracking-id`.
-4. **Capture an order flow** — clear old events, perform the ordering steps, then review the Order Flow row.
-5. **Select rows** — check the order-flow rows to include in Report, JSON, or CSV. If no rows are checked, all rows are included.
-6. **Report** — click "Report" to generate a clean order-flow table, then copy it or open an email draft.
-7. **Export** — click "JSON" or "CSV" to download selected order-flow rows with date and timestamp fields.
-8. **Configure** — click the gear button to edit URL filters, milestone URL patterns, report recipients, retention, and max saved events.
-9. **Clear** — click the trash icon to wipe stored events and reset the badge.
+4. **Open full tab** — click "Open" to review the same order-flow table in a wider browser tab.
+5. **Capture an order flow** — clear old events, perform the ordering steps, then review the Order Flow row.
+6. **Select rows** — check the order-flow rows to include in Report, JSON, or CSV. If no rows are checked, all rows are included.
+7. **Report** — click "Report" to generate a clean order-flow table, then copy it or open an email draft.
+8. **Export** — click "JSON" or "CSV" to download selected order-flow rows with date and timestamp fields.
+9. **Configure** — click the gear button to edit URL filters, milestone URL patterns, report recipients, retention, and max saved events.
+10. **Clear** — click the trash icon to wipe stored events and reset the badge.
 
 ---
 

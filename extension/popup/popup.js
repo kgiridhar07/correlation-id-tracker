@@ -19,6 +19,7 @@ const timeFilter = document.getElementById('timeFilter') || fallbackInput('all')
 const duplicateOnly = document.getElementById('duplicateOnly') || fallbackCheckbox(false);
 const collapseDuplicates = document.getElementById('collapseDuplicates') || fallbackCheckbox(false);
 const btnRefresh = document.getElementById('btnRefresh');
+const btnOpenDashboard = document.getElementById('btnOpenDashboard');
 const btnOptions = document.getElementById('btnOptions');
 const btnClear = document.getElementById('btnClear');
 const btnGenerateReport = document.getElementById('btnGenerateReport');
@@ -537,6 +538,16 @@ function openOptions() {
   }
 }
 
+function openDashboard() {
+  const extensionApi = getExtensionApi();
+  const url = extensionApi.runtime.getURL('dashboard/dashboard.html');
+  if (extensionApi.tabs && extensionApi.tabs.create) {
+    extensionApi.tabs.create({ url });
+    return;
+  }
+  window.open(url, '_blank');
+}
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -562,6 +573,7 @@ function attachListeners() {
   duplicateOnly.addEventListener('change', refreshDerivedState);
   collapseDuplicates.addEventListener('change', refreshDerivedState);
   btnRefresh.addEventListener('click', loadEvents);
+  if (btnOpenDashboard) btnOpenDashboard.addEventListener('click', openDashboard);
   btnOptions.addEventListener('click', openOptions);
   btnClear.addEventListener('click', clearEvents);
   btnGenerateReport.addEventListener('click', generateReport);
