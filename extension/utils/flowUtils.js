@@ -257,13 +257,17 @@ export function buildOrderFlowRows(events, flowState = {}, milestones = ORDER_FL
   const normalizedMilestones = normalizeOrderFlowMilestones(milestones);
   const globalContext = buildBusinessContext(flowState, selectedEvents);
   const rowsByTrackingId = new Map();
+  const untrackedMilestoneRequests = [];
 
   for (const request of buildNetworkRequests(selectedEvents)) {
     const match = findBestMilestoneMatch(request, normalizedMilestones);
     if (!match) continue;
 
     const trackingEvent = request.events.find((event) => isHeader(event, 'order-tracking-id'));
-    if (!trackingEvent || !trackingEvent.correlationId) continue;
+    if (!trackingEvent || !trackingEvent.correlationId) {
+      untrackedMilestoneRequests.push({ request, match });
+      continue;
+    }
 
     const correlationEvent = findMilestoneCorrelationEvent(request.events) || trackingEvent;
     const trackingId = trackingEvent.correlationId;
@@ -280,6 +284,8 @@ export function buildOrderFlowRows(events, flowState = {}, milestones = ORDER_FL
     row.lastUpdated = Math.max(row.lastUpdated, correlationEvent.timestamp || request.timestamp || 0);
   }
 
+  attachUntrackedMilestones(Array.from(rowsByTrackingId.values()), untrackedMilestoneRequests);
+
   if (!rowsByTrackingId.size && hasBusinessContext(globalContext)) {
     ensureFlowRow(rowsByTrackingId, '', globalContext, -1);
   }
@@ -287,6 +293,46 @@ export function buildOrderFlowRows(events, flowState = {}, milestones = ORDER_FL
   const rows = Array.from(rowsByTrackingId.values()).sort((a, b) => a.firstSeen - b.firstSeen);
   applyScopedBusinessContext(rows, flowState, selectedEvents, globalContext);
   return rows.sort((a, b) => b.lastUpdated - a.lastUpdated);
+}
+
+function attachUntrackedMilestones(rows, untrackedMilestoneRequests) {
+  if (!rows.length || !untrackedMilestoneRequests.length) return;
+
+  for (const { request, match } of untrackedMilestoneRequests) {
+    if (match.key !== 'reserveDelivery') continue;
+    const correlationEvent = findMilestoneCorrelationEvent(request.events);
+    if (!correlationEvent || !correlationEvent.correlationId) continue;
+
+    const row = findBestRowForUntrackedMilestone(rows, request, correlationEvent);
+    if (!row || row[match.key]) continue;
+
+    row[match.key] = {
+      correlationId: correlationEvent.correlationId,
+      headerName: correlationEvent.headerName || '',
+      url: request.url || '',
+      timestamp: correlationEvent.timestamp || request.timestamp || 0,
+    };
+    row.networkLastUpdated = Math.max(row.networkLastUpdated || 0, correlationEvent.timestamp || request.timestamp || 0);
+    row.lastUpdated = Math.max(row.lastUpdated || 0, correlationEvent.timestamp || request.timestamp || 0);
+  }
+}
+
+function findBestRowForUntrackedMilestone(rows, request, correlationEvent) {
+  const timestamp = correlationEvent.timestamp || request.timestamp || 0;
+  const sameTabRows = rows.filter((row) => row.tabId < 0 || request.tabId < 0 || row.tabId === request.tabId);
+  const candidates = sameTabRows.length ? sameTabRows : rows;
+  if (candidates.length === 1) return candidates[0];
+
+  return candidates
+    .map((row) => ({ row, distance: getRowMilestoneDistance(row, timestamp) }))
+    .sort((a, b) => a.distance - b.distance)[0].row;
+}
+
+function getRowMilestoneDistance(row, timestamp) {
+  const anchors = [row.networkLastUpdated, row.lastUpdated, row.networkFirstSeen, row.firstSeen]
+    .filter((value) => Number.isFinite(value) && value > 0);
+  if (!anchors.length) return Number.POSITIVE_INFINITY;
+  return Math.min(...anchors.map((value) => Math.abs(timestamp - value)));
 }
 
 function applyScopedBusinessContext(rows, flowState, events, globalContext) {

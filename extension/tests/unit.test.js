@@ -249,6 +249,32 @@ test('matches reserve delivery URL variants for order flow rows', () => {
   assertEqual(rows[0].reserveDelivery.correlationId, 'RES-CORR');
 });
 
+test('attaches untracked reserve correlation to a two SKU order row', () => {
+  const now = 1000000;
+  const milestones = normalizeOrderFlowMilestones([
+    'Sourcing Options | sourcingOptions',
+    'Capacity | callType=capacity',
+    'Reserve Delivery | reserveDelivery',
+  ]);
+  const events = [
+    { requestId: 'src-1', correlationId: 'TRACK-1', headerName: 'order-tracking-id', timestamp: now - 1000, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'src-1', correlationId: 'SRC-CORR', headerName: 'usom-correlationid', timestamp: now - 999, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions' },
+    { requestId: 'cap-1', correlationId: 'TRACK-1', headerName: 'order-tracking-id', timestamp: now - 900, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { requestId: 'cap-1', correlationId: 'CAP-CORR', headerName: 'usom-correlationid', timestamp: now - 899, sourceType: 'request-header', method: 'GET', tabId: 7, url: 'https://api.example.com/sourcingOptions?callType=capacity' },
+    { requestId: 'reserve-cart', correlationId: 'RES-CORR', headerName: 'usom-correlationid', timestamp: now - 800, sourceType: 'request-header', method: 'POST', tabId: 7, url: 'https://api.example.com/reserveDelivery' },
+    { correlationId: 'SKU-1', timestamp: now - 700, sourceType: 'page-data', fieldLabel: 'SKU', fieldPath: 'dom:[data-testid="product-description__sku-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/product' },
+    { correlationId: 'SKU-2', timestamp: now - 695, sourceType: 'page-data', fieldLabel: 'SKU', fieldPath: 'dom:[data-testid="product-description__sku-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/product' },
+    { correlationId: 'QUOTE-1', timestamp: now - 680, sourceType: 'page-data', fieldLabel: 'Quote ID', fieldPath: 'dom:[data-testid="order-number"]', method: 'PAGE', tabId: 7, url: 'https://orderup.example.com/quote' },
+  ];
+
+  const rows = buildOrderFlowRows(events, {}, milestones);
+  assertEqual(rows.length, 1);
+  assertEqual(rows[0].sku, 'SKU-1, SKU-2');
+  assertEqual(rows[0].sourcingOptions.correlationId, 'SRC-CORR');
+  assertEqual(rows[0].capacity.correlationId, 'CAP-CORR');
+  assertEqual(rows[0].reserveDelivery.correlationId, 'RES-CORR');
+});
+
 test('keeps previous order flow rows when another flow is captured', () => {
   const milestones = normalizeOrderFlowMilestones([
     'Sourcing Options | sourcingOptions',
