@@ -10,6 +10,7 @@ import { buildOrderFlowRows } from '../utils/flowUtils.js';
 import { initRenderer, renderEvents, prependEvent } from './tableRenderer.js';
 
 const FLOW_STORAGE_KEY = 'correlationTrackerOrderFlow';
+const AUTOMATION_STORAGE_KEY = 'correlationTrackerAutomation';
 
 const searchInput = document.getElementById('searchInput') || fallbackInput('');
 const sourceFilter = document.getElementById('sourceFilter') || fallbackInput('all');
@@ -20,6 +21,9 @@ const duplicateOnly = document.getElementById('duplicateOnly') || fallbackCheckb
 const collapseDuplicates = document.getElementById('collapseDuplicates') || fallbackCheckbox(false);
 const btnRefresh = document.getElementById('btnRefresh');
 const btnAutoScan = document.getElementById('btnAutoScan');
+const btnRunOrderFlow = document.getElementById('btnRunOrderFlow');
+const automationSku = document.getElementById('automationSku') || fallbackInput('');
+const automationCustomer = document.getElementById('automationCustomer') || fallbackInput('');
 const btnOpenDashboard = document.getElementById('btnOpenDashboard');
 const btnOptions = document.getElementById('btnOptions');
 const btnClear = document.getElementById('btnClear');
@@ -443,6 +447,55 @@ async function runAutoScan() {
   }
 }
 
+async function runOrderWorkflow() {
+  const automationState = readAutomationInputs();
+  saveAutomationState(automationState);
+  if (!automationState.sku || !automationState.customer) {
+    setStatus('Enter SKU and customer before Run Flow');
+    return;
+  }
+
+  setStatus('Running order flow...');
+  try {
+    const response = await sendMessageToActiveTab({ type: MSG.RUN_ORDER_WORKFLOW, data: automationState });
+    if (response && response.success) {
+      await loadEvents();
+      const completed = response.steps ? response.steps.filter((step) => step.success).length : 0;
+      const total = response.steps ? response.steps.length : 0;
+      setStatus(`Run Flow complete: ${completed}/${total} steps completed`);
+      return;
+    }
+    setStatus(response && response.error ? `Run Flow failed: ${response.error}` : 'Run Flow failed');
+  } catch (err) {
+    setStatus(`Run Flow failed: ${err.message}`);
+  }
+}
+
+function readAutomationInputs() {
+  return {
+    sku: automationSku.value.trim(),
+    customer: automationCustomer.value.trim(),
+  };
+}
+
+function loadAutomationState() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(AUTOMATION_STORAGE_KEY)) || {};
+    automationSku.value = stored.sku || '';
+    automationCustomer.value = stored.customer || '';
+  } catch (_err) {
+    automationSku.value = '';
+    automationCustomer.value = '';
+  }
+}
+
+function saveAutomationState(value = readAutomationInputs()) {
+  localStorage.setItem(AUTOMATION_STORAGE_KEY, JSON.stringify({
+    sku: value.sku || '',
+    customer: value.customer || '',
+  }));
+}
+
 async function handleTableClick(event) {
   const button = event.target.closest('.btn-copy');
   if (!button) return;
@@ -626,6 +679,7 @@ function downloadBlob(blob, filename) {
 const debouncedRefresh = debounce(refreshDerivedState, UI.DEBOUNCE_MS);
 
 if (hasRawEventTable) initRenderer(eventsBody, emptyState);
+loadAutomationState();
 updateFlowUi();
 loadEvents();
 attachListeners();
@@ -640,6 +694,10 @@ function attachListeners() {
   collapseDuplicates.addEventListener('change', refreshDerivedState);
   btnRefresh.addEventListener('click', loadEvents);
   if (btnAutoScan) btnAutoScan.addEventListener('click', runAutoScan);
+  if (btnRunOrderFlow) btnRunOrderFlow.addEventListener('click', runOrderWorkflow);
+  [automationSku, automationCustomer]
+    .filter(Boolean)
+    .forEach((input) => input.addEventListener('change', () => saveAutomationState()));
   if (btnOpenDashboard) btnOpenDashboard.addEventListener('click', openDashboard);
   btnOptions.addEventListener('click', openOptions);
   btnClear.addEventListener('click', clearEvents);

@@ -22,6 +22,20 @@
   </header>
 
   <main>
+    <section class="automation-panel" aria-label="Order automation">
+      <div class="automation-grid">
+        <label>
+          SKU
+          <input id="automationSku" type="text" autocomplete="off" spellcheck="false" placeholder="Enter SKU">
+        </label>
+        <label>
+          Customer
+          <input id="automationCustomer" type="text" autocomplete="off" spellcheck="false" placeholder="Enter customer">
+        </label>
+        <button id="btnRunOrderFlow" title="Search SKU, add cart, select customer, and schedule delivery">Run Flow</button>
+      </div>
+    </section>
+
     <section class="flow-panel" aria-label="Order flow capture">
       <div class="flow-header">
         <div>

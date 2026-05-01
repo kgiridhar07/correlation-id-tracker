@@ -156,6 +156,8 @@ Order Flow Capture is designed for SKU-to-delivery troubleshooting. Clear old ev
 
 Use **Auto Scan** from the popup to reveal likely order page sections such as order, quote, product/SKU, customer, address, delivery, and fulfillment, then rescan the page fields. Auto Scan skips risky action labels such as submit, confirm, place order, checkout, pay, purchase, reserve, delete, remove, and cancel.
 
+Use **Run Flow** after entering SKU and Customer to automate the common logged-in path: search SKU, select SKU, add to cart, view cart, select customer, search customer, choose customer, open delivery options, and schedule delivery. The flow captures page data after every step and still blocks final order/payment style actions such as place order, submit order, confirm order, pay, purchase, delete, remove, and cancel.
+
 Automatic values:
 
 ```text

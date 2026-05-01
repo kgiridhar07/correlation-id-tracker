@@ -56,6 +56,17 @@
         .catch((err) => sendResponse({ success: false, error: err.message }));
       return true;
     }
+    if (message && message.type === 'RUN_ORDER_WORKFLOW') {
+      if (typeof sendResponse !== 'function') {
+        return runOrderWorkflow(message.data || {})
+          .then((result) => ({ success: true, ...result }))
+          .catch((err) => ({ success: false, error: err.message }));
+      }
+      runOrderWorkflow(message.data || {})
+        .then((result) => sendResponse({ success: true, ...result }))
+        .catch((err) => sendResponse({ success: false, error: err.message }));
+      return true;
+    }
     return undefined;
   });
 
@@ -152,6 +163,153 @@
     };
   }
 
+  async function runOrderWorkflow(data) {
+    const sku = normalizeText(data.sku);
+    const customer = normalizeText(data.customer);
+    if (!sku || !customer) throw new Error('SKU and customer are required');
+
+    if (!activeConfig) {
+      const response = await sendRuntimeMessage({ type: 'GET_CONFIG' });
+      if (response && response.success) activeConfig = response.data;
+    }
+
+    const steps = [];
+    await recordWorkflowStep(steps, 'Search SKU', () => searchForValue(sku, ['sku', 'search', 'product', 'item']));
+    await recordWorkflowStep(steps, 'Select SKU', () => clickFirstMatch([sku, 'select', 'view details'], { preferText: sku }));
+    await recordWorkflowStep(steps, 'Add To Cart', () => clickFirstMatch(['add to cart', 'add item', 'add'], { requireAny: ['cart', 'add'] }));
+    await recordWorkflowStep(steps, 'View Cart', () => clickFirstMatch(['view cart', 'cart']));
+    await recordWorkflowStep(steps, 'Select Customer', () => clickFirstMatch(['select customer', 'customer']));
+    await recordWorkflowStep(steps, 'Search Customer', () => searchForValue(customer, ['customer', 'search', 'name']));
+    await recordWorkflowStep(steps, 'Choose Customer', () => clickFirstMatch([customer, 'select customer', 'select'], { preferText: customer }));
+    await recordWorkflowStep(steps, 'Delivery Option', () => clickFirstMatch(['delivery option', 'delivery options', 'delivery']));
+    await recordWorkflowStep(steps, 'Schedule Delivery', () => clickFirstMatch(['schedule delivery', 'schedule']));
+
+    const capturedCount = await scanDomWatchers();
+    return { steps, capturedCount };
+  }
+
+  async function recordWorkflowStep(steps, label, action) {
+    try {
+      const detail = await action();
+      await wait(900);
+      const capturedCount = await scanDomWatchers();
+      steps.push({ label, success: true, detail, capturedCount });
+    } catch (err) {
+      steps.push({ label, success: false, error: err.message });
+    }
+  }
+
+  async function searchForValue(value, hints) {
+    const input = findBestSearchInput(hints);
+    if (!input) throw new Error(`Could not find search input for ${value}`);
+    focusAndSetValue(input, value);
+    await wait(250);
+    pressEnter(input);
+    return getElementLabel(input) || input.getAttribute('placeholder') || 'search input';
+  }
+
+  function findBestSearchInput(hints) {
+    const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), [contenteditable="true"], [role="textbox"]'));
+    const visibleInputs = inputs.filter((input) => isVisible(input) && !isDisabled(input));
+    if (!visibleInputs.length) return null;
+
+    const scored = visibleInputs.map((input) => ({ input, score: scoreInput(input, hints) }));
+    scored.sort((a, b) => b.score - a.score);
+    return scored[0].input;
+  }
+
+  function scoreInput(input, hints) {
+    const label = getElementLabel(input).toLowerCase();
+    let score = 0;
+    if (label.includes('search')) score += 20;
+    for (const hint of hints) {
+      if (label.includes(hint)) score += 10;
+    }
+    if (input === document.activeElement) score += 4;
+    if (!input.value) score += 2;
+    return score;
+  }
+
+  function focusAndSetValue(input, value) {
+    input.scrollIntoView({ block: 'center', inline: 'nearest' });
+    input.focus();
+    if (input.isContentEditable) {
+      input.textContent = value;
+    } else {
+      setNativeInputValue(input, value);
+    }
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function setNativeInputValue(input, value) {
+    const valueSetter = Object.getOwnPropertyDescriptor(input, 'value') && Object.getOwnPropertyDescriptor(input, 'value').set;
+    const prototype = Object.getPrototypeOf(input);
+    const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value') && Object.getOwnPropertyDescriptor(prototype, 'value').set;
+    if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
+      prototypeValueSetter.call(input, value);
+      return;
+    }
+    if (valueSetter) {
+      valueSetter.call(input, value);
+      return;
+    }
+    input.value = value;
+  }
+
+  function pressEnter(element) {
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+    element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }));
+  }
+
+  async function clickFirstMatch(texts, options = {}) {
+    const element = findClickableByText(texts, options);
+    if (!element) throw new Error(`Could not find ${texts.join(' or ')}`);
+    element.scrollIntoView({ block: 'center', inline: 'nearest' });
+    await wait(150);
+    element.click();
+    return getElementLabel(element);
+  }
+
+  function findClickableByText(texts, options = {}) {
+    const normalizedTexts = texts.map((text) => text.toLowerCase());
+    const candidates = Array.from(document.querySelectorAll(AUTOMATION_SELECTOR))
+      .map(getClickableElement)
+      .filter(Boolean)
+      .filter((element, index, all) => all.indexOf(element) === index)
+      .filter((element) => isVisible(element) && !isDisabled(element));
+
+    const scored = [];
+    for (const element of candidates) {
+      const label = getElementLabel(element).toLowerCase();
+      if (!label) continue;
+      if (isDangerousWorkflowClick(label)) continue;
+      if (options.requireAny && !options.requireAny.some((text) => label.includes(text))) continue;
+      const score = scoreClickable(label, normalizedTexts, options.preferText);
+      if (score > 0) scored.push({ element, score });
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.length ? scored[0].element : null;
+  }
+
+  function scoreClickable(label, texts, preferText) {
+    let score = 0;
+    for (const text of texts) {
+      if (!text) continue;
+      if (label === text) score += 100;
+      else if (label.includes(text)) score += 40;
+    }
+    const normalizedPreferText = String(preferText || '').toLowerCase();
+    if (normalizedPreferText && label.includes(normalizedPreferText)) score += 80;
+    return score;
+  }
+
+  function isDangerousWorkflowClick(label) {
+    const blocked = ['place order', 'submit order', 'confirm order', 'pay', 'payment', 'purchase', 'delete', 'remove', 'cancel', 'sign out', 'logout'];
+    return blocked.some((keyword) => label.includes(keyword));
+  }
+
   function getAutomationCandidates() {
     const candidates = [];
     const seen = new Set();
@@ -181,6 +339,9 @@
       element.getAttribute('aria-label'),
       element.getAttribute('title'),
       element.getAttribute('data-testid'),
+      element.getAttribute('placeholder'),
+      element.getAttribute('name'),
+      element.id,
       element.textContent,
     ].filter(Boolean).join(' '));
   }

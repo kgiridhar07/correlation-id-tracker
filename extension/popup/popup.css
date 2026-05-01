@@ -151,6 +151,58 @@ body {
   color: #fff;
 }
 
+.automation-panel {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  background: #1f2528;
+  border-bottom: 1px solid #334047;
+}
+
+.automation-grid {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.2fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.automation-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #b9d7e3;
+  font-size: 11px;
+}
+
+.automation-grid input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #45565f;
+  border-radius: 4px;
+  background: #181d20;
+  color: #e8f3f7;
+  font-size: 12px;
+  outline: none;
+}
+
+.automation-grid input:focus {
+  border-color: #76b7d6;
+}
+
+.automation-grid button {
+  padding: 6px 10px;
+  border: 1px solid #4b6f7f;
+  border-radius: 4px;
+  background: #25414d;
+  color: #e8f3f7;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.automation-grid button:hover {
+  background: #315767;
+}
+
 /* ── Table ─────────────────────────────────────────────────────────────────── */
 main {
   flex: 1;
