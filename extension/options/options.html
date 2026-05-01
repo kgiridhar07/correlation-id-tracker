@@ -27,6 +27,12 @@
       </section>
 
       <section class="panel">
+        <label for="orderAutomationSelectors">Order automation selectors</label>
+        <textarea id="orderAutomationSelectors" rows="10" spellcheck="false" placeholder="SKU Search Input | input[name='sku']&#10;Add To Cart Button | [data-testid='add-to-cart']"></textarea>
+        <p>Optional. One line per automation target: label, pipe, then CSS selector. Use semicolons for fallback selectors.</p>
+      </section>
+
+      <section class="panel">
         <label for="reportRecipients">Report recipients</label>
         <textarea id="reportRecipients" rows="4" spellcheck="false" placeholder="sre-team@example.com&#10;manager@example.com"></textarea>
         <p>One email per line. Send Report opens a draft addressed to these recipients.</p>

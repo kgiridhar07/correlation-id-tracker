@@ -38,6 +38,19 @@ export const ORDER_FLOW_MILESTONES = Object.freeze([
   },
 ]);
 
+/** Optional selectors used by guided order automation before text-based fallback. */
+export const ORDER_AUTOMATION_SELECTORS = Object.freeze([
+  { key: 'skuSearchInput', label: 'SKU Search Input', selectors: [] },
+  { key: 'skuResult', label: 'SKU Result', selectors: [] },
+  { key: 'addToCartButton', label: 'Add To Cart Button', selectors: [] },
+  { key: 'viewCartButton', label: 'View Cart Button', selectors: [] },
+  { key: 'selectCustomerButton', label: 'Select Customer Button', selectors: [] },
+  { key: 'customerSearchInput', label: 'Customer Search Input', selectors: [] },
+  { key: 'customerResult', label: 'Customer Result', selectors: [] },
+  { key: 'deliveryOptionsButton', label: 'Delivery Options Button', selectors: [] },
+  { key: 'scheduleDeliveryButton', label: 'Schedule Delivery Button', selectors: [] },
+]);
+
 /** Persisted user configuration */
 export const CONFIG = Object.freeze({
   STORAGE_KEY: 'correlationTrackerConfig',
@@ -72,6 +85,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   pageDataPollMs: 1000,
   pageDataDurationSeconds: 120,
   orderFlowMilestones: ORDER_FLOW_MILESTONES,
+  orderAutomationSelectors: ORDER_AUTOMATION_SELECTORS,
   reportRecipients: [],
   maxEvents: STORAGE_LIMITS.MAX_EVENTS,
   retentionHours: 24,

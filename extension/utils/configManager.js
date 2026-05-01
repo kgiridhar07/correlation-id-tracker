@@ -25,6 +25,58 @@ function normalizeEmailList(value) {
   return Array.from(new Set(cleaned)).slice(0, 25);
 }
 
+function normalizeOrderAutomationSelectors(value = DEFAULT_CONFIG.orderAutomationSelectors) {
+  const defaultsByKey = new Map(DEFAULT_CONFIG.orderAutomationSelectors.map((item) => [item.key, item]));
+  const nextByKey = new Map(DEFAULT_CONFIG.orderAutomationSelectors.map((item) => [
+    item.key,
+    { ...item, selectors: [] },
+  ]));
+  const items = Array.isArray(value) ? value : String(value || '').split('\n');
+
+  for (const item of items) {
+    const parsed = parseAutomationSelectorItem(item);
+    if (!parsed || !nextByKey.has(parsed.key)) continue;
+    nextByKey.get(parsed.key).selectors.push(...parsed.selectors);
+  }
+
+  return Array.from(nextByKey.values()).map((item) => {
+    const fallback = defaultsByKey.get(item.key);
+    const selectors = Array.from(new Set(item.selectors.map((selector) => selector.trim()).filter(Boolean)));
+    return { ...fallback, selectors };
+  });
+}
+
+function parseAutomationSelectorItem(item) {
+  if (item && typeof item === 'object') {
+    const key = String(item.key || '').trim();
+    const label = String(item.label || '').trim();
+    const selectors = Array.isArray(item.selectors) ? item.selectors : String(item.selectors || '').split(/[;\n]/);
+    return key ? { key, label, selectors: selectors.map(String) } : null;
+  }
+
+  const line = String(item || '').trim();
+  if (!line || !line.includes('|')) return null;
+  const [labelPart, selectorPart] = line.split('|');
+  const key = getAutomationSelectorKey(labelPart);
+  const selectors = String(selectorPart || '').split(/[;\n]/).map((selector) => selector.trim());
+  return key ? { key, selectors } : null;
+}
+
+function getAutomationSelectorKey(label) {
+  const normalized = String(label || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const match = DEFAULT_CONFIG.orderAutomationSelectors.find((item) => {
+    const itemLabel = item.label.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    return normalized === item.key.toLowerCase() || normalized === itemLabel;
+  });
+  return match ? match.key : '';
+}
+
+export function formatOrderAutomationSelectorLines(selectors = DEFAULT_CONFIG.orderAutomationSelectors) {
+  return normalizeOrderAutomationSelectors(selectors)
+    .map((item) => `${item.label} | ${item.selectors.join('; ')}`)
+    .join('\n');
+}
+
 /**
  * Normalize user configuration and fill missing values with defaults.
  * @param {Object} value
@@ -41,6 +93,7 @@ export function normalizeConfig(value = {}) {
     correlationHeaders: normalizeStringList(value.correlationHeaders, DEFAULT_CONFIG.correlationHeaders),
     pageDataWatchers: normalizePageDataWatchers(value.pageDataWatchers),
     orderFlowMilestones: normalizeOrderFlowMilestones(value.orderFlowMilestones),
+    orderAutomationSelectors: normalizeOrderAutomationSelectors(value.orderAutomationSelectors),
     pageDataPollMs: Number.isFinite(pageDataPollMs) ? clamp(pageDataPollMs, 250, 10000) : DEFAULT_CONFIG.pageDataPollMs,
     pageDataDurationSeconds: Number.isFinite(pageDataDurationSeconds) ? clamp(pageDataDurationSeconds, 1, 300) : DEFAULT_CONFIG.pageDataDurationSeconds,
     reportRecipients: normalizeEmailList(value.reportRecipients),
@@ -85,6 +138,7 @@ export function getConfig() {
     correlationHeaders: [...activeConfig.correlationHeaders],
     pageDataWatchers: activeConfig.pageDataWatchers.map((watcher) => ({ ...watcher })),
     orderFlowMilestones: activeConfig.orderFlowMilestones.map((milestone) => ({ ...milestone, patterns: [...milestone.patterns] })),
+    orderAutomationSelectors: activeConfig.orderAutomationSelectors.map((item) => ({ ...item, selectors: [...item.selectors] })),
     pageDataPollMs: activeConfig.pageDataPollMs,
     pageDataDurationSeconds: activeConfig.pageDataDurationSeconds,
     reportRecipients: [...activeConfig.reportRecipients],

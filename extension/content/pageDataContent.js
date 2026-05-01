@@ -174,15 +174,15 @@
     }
 
     const steps = [];
-    await recordWorkflowStep(steps, 'Search SKU', () => searchForValue(sku, ['sku', 'search', 'product', 'item']));
-    await recordWorkflowStep(steps, 'Select SKU', () => clickFirstMatch([sku, 'select', 'view details'], { preferText: sku }));
-    await recordWorkflowStep(steps, 'Add To Cart', () => clickFirstMatch(['add to cart', 'add item', 'add'], { requireAny: ['cart', 'add'] }));
-    await recordWorkflowStep(steps, 'View Cart', () => clickFirstMatch(['view cart', 'cart']));
-    await recordWorkflowStep(steps, 'Select Customer', () => clickFirstMatch(['select customer', 'customer']));
-    await recordWorkflowStep(steps, 'Search Customer', () => searchForValue(customer, ['customer', 'search', 'name']));
-    await recordWorkflowStep(steps, 'Choose Customer', () => clickFirstMatch([customer, 'select customer', 'select'], { preferText: customer }));
-    await recordWorkflowStep(steps, 'Delivery Option', () => clickFirstMatch(['delivery option', 'delivery options', 'delivery']));
-    await recordWorkflowStep(steps, 'Schedule Delivery', () => clickFirstMatch(['schedule delivery', 'schedule']));
+    await recordWorkflowStep(steps, 'Search SKU', () => searchForValue(sku, ['sku', 'search', 'product', 'item'], 'skuSearchInput'));
+    await recordWorkflowStep(steps, 'Select SKU', () => clickFirstMatch([sku, 'select', 'view details'], { selectorKey: 'skuResult', preferText: sku }));
+    await recordWorkflowStep(steps, 'Add To Cart', () => clickFirstMatch(['add to cart', 'add item', 'add'], { selectorKey: 'addToCartButton', requireAny: ['cart', 'add'] }));
+    await recordWorkflowStep(steps, 'View Cart', () => clickFirstMatch(['view cart', 'cart'], { selectorKey: 'viewCartButton' }));
+    await recordWorkflowStep(steps, 'Select Customer', () => clickFirstMatch(['select customer', 'customer'], { selectorKey: 'selectCustomerButton' }));
+    await recordWorkflowStep(steps, 'Search Customer', () => searchForValue(customer, ['customer', 'search', 'name'], 'customerSearchInput'));
+    await recordWorkflowStep(steps, 'Choose Customer', () => clickFirstMatch([customer, 'select customer', 'select'], { selectorKey: 'customerResult', preferText: customer }));
+    await recordWorkflowStep(steps, 'Delivery Option', () => clickFirstMatch(['delivery option', 'delivery options', 'delivery'], { selectorKey: 'deliveryOptionsButton' }));
+    await recordWorkflowStep(steps, 'Schedule Delivery', () => clickFirstMatch(['schedule delivery', 'schedule'], { selectorKey: 'scheduleDeliveryButton' }));
 
     const capturedCount = await scanDomWatchers();
     return { steps, capturedCount };
@@ -199,8 +199,8 @@
     }
   }
 
-  async function searchForValue(value, hints) {
-    const input = findBestSearchInput(hints);
+  async function searchForValue(value, hints, selectorKey) {
+    const input = findConfiguredElement(selectorKey, { inputOnly: true }) || findBestSearchInput(hints);
     if (!input) throw new Error(`Could not find search input for ${value}`);
     focusAndSetValue(input, value);
     await wait(250);
@@ -263,12 +263,48 @@
   }
 
   async function clickFirstMatch(texts, options = {}) {
-    const element = findClickableByText(texts, options);
+    const element = findConfiguredElement(options.selectorKey, { preferText: options.preferText }) || findClickableByText(texts, options);
     if (!element) throw new Error(`Could not find ${texts.join(' or ')}`);
     element.scrollIntoView({ block: 'center', inline: 'nearest' });
     await wait(150);
     element.click();
     return getElementLabel(element);
+  }
+
+  function findConfiguredElement(selectorKey, options = {}) {
+    const selectors = getConfiguredSelectors(selectorKey);
+    if (!selectors.length) return null;
+
+    const matches = [];
+    for (const selector of selectors) {
+      try {
+        matches.push(...document.querySelectorAll(selector));
+      } catch (_err) {
+        // Ignore invalid user-configured selectors and continue to fallbacks.
+      }
+    }
+
+    const candidates = matches
+      .map((element) => options.inputOnly ? element : getClickableElement(element))
+      .filter(Boolean)
+      .filter((element, index, all) => all.indexOf(element) === index)
+      .filter((element) => isVisible(element) && !isDisabled(element));
+    if (!candidates.length) return null;
+
+    const preferText = String(options.preferText || '').toLowerCase();
+    if (!preferText) return candidates[0];
+
+    return candidates
+      .map((element) => ({ element, score: getElementLabel(element).toLowerCase().includes(preferText) ? 1 : 0 }))
+      .sort((a, b) => b.score - a.score)[0].element;
+  }
+
+  function getConfiguredSelectors(selectorKey) {
+    const selectors = activeConfig && Array.isArray(activeConfig.orderAutomationSelectors)
+      ? activeConfig.orderAutomationSelectors
+      : [];
+    const item = selectors.find((entry) => entry.key === selectorKey);
+    return item && Array.isArray(item.selectors) ? item.selectors.filter(Boolean) : [];
   }
 
   function findClickableByText(texts, options = {}) {

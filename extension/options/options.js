@@ -1,10 +1,12 @@
 import { DEFAULT_CONFIG, MSG } from '../utils/constants.js';
 import { sendRuntimeMessage } from '../utils/browserApi.js';
+import { formatOrderAutomationSelectorLines } from '../utils/configManager.js';
 import { formatOrderFlowMilestoneLines } from '../utils/flowUtils.js';
 
 const form = document.getElementById('optionsForm');
 const urlFilters = document.getElementById('urlFilters');
 const orderFlowMilestones = document.getElementById('orderFlowMilestones');
+const orderAutomationSelectors = document.getElementById('orderAutomationSelectors');
 const reportRecipients = document.getElementById('reportRecipients');
 const maxEvents = document.getElementById('maxEvents');
 const retentionHours = document.getElementById('retentionHours');
@@ -54,6 +56,7 @@ function readForm() {
     correlationHeaders: DEFAULT_CONFIG.correlationHeaders,
     pageDataWatchers: [],
     orderFlowMilestones: orderFlowMilestones.value.split('\n'),
+    orderAutomationSelectors: orderAutomationSelectors.value.split('\n'),
     pageDataPollMs: pageDataPollMs.value,
     pageDataDurationSeconds: pageDataDurationSeconds.value,
     reportRecipients: reportRecipients.value.split('\n'),
@@ -65,6 +68,7 @@ function readForm() {
 function fillForm(config) {
   urlFilters.value = config.urlFilters.join('\n');
   orderFlowMilestones.value = formatOrderFlowMilestoneLines(config.orderFlowMilestones || []);
+  orderAutomationSelectors.value = formatOrderAutomationSelectorLines(config.orderAutomationSelectors || []);
   reportRecipients.value = (config.reportRecipients || []).join('\n');
   pageDataPollMs.value = config.pageDataPollMs;
   pageDataDurationSeconds.value = config.pageDataDurationSeconds;
