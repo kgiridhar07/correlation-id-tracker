@@ -121,7 +121,7 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `urlFilters` | `[]` | URL substrings to match; configure these in Options before capturing network headers |
+| `urlFilters` | `[]` | Legacy setting; order-flow network capture is gated by milestone URL patterns |
 | `correlationHeaders` | `['order-tracking-id', 'usom-correlationid']` | Legacy setting; order-flow capture is limited to `order-tracking-id` and `usom-correlationid` |
 | `pageDataWatchers` | `[]` | Legacy setting; custom page globals are not captured in strict order-flow mode |
 | `pageDataPollMs` | `1,000` | Page-data polling interval |
@@ -171,12 +171,12 @@ The built-in DOM values above are scanned from the order page even when URL filt
 
 The Order Flow table combines captured DOM values and matching network header captures on the same line. Each row includes the latest timestamp for that flow, keeps all unique SKU values seen during capture, uses `order-tracking-id` only as the stitch key, and uses `usom-correlationid` as the displayed milestone correlation ID when present.
 
-Milestone URL matching is configurable in Options. The default milestone patterns are:
+Milestone URL matching is configurable in Options. These patterns are the network capture gate for Sourcing, Capacity, and Reserve. The default milestone patterns are:
 
 ```text
-Sourcing Options | sourcingoptions
-Capacity | sourcingoptions?calltype=capacity
-Reserve Delivery | reservedelivery
+Sourcing Options | sourcingoptions; sourcing-options; source/options; source-options
+Capacity | sourcingoptions?calltype=capacity; calltype=capacity; delivery-capacity; capacity
+Reserve Delivery | reservedelivery; reserve-delivery; reserve_delivery; reserve/delivery; delivery/reserve; appointments/reservations; reservation; reservations
 ```
 
 You can put multiple patterns on a line with semicolons:
@@ -185,7 +185,7 @@ You can put multiple patterns on a line with semicolons:
 Sourcing Options | /sourcing-options; /source/options
 ```
 
-The extension captures only `order-tracking-id` and `usom-correlationid` from URLs matching these milestone patterns. Other matching network traffic is ignored.
+The extension captures only `order-tracking-id` and `usom-correlationid` from URLs matching these milestone patterns. A separate URL filter does not block Reserve capture.
 
 When `order-tracking-id` is shared across Sourcing Options, Capacity, and Reserve Delivery, the row can show all three `usom-correlationid` values beside the same SKU/customer/address/delivery/quote data.
 

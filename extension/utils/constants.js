@@ -24,17 +24,17 @@ export const ORDER_FLOW_MILESTONES = Object.freeze([
   {
     key: 'sourcingOptions',
     label: 'Sourcing Options',
-    patterns: ['sourcingoptions'],
+    patterns: ['sourcingoptions', 'sourcing-options', 'source/options', 'source-options'],
   },
   {
     key: 'capacity',
     label: 'Capacity',
-    patterns: ['sourcingoptions?calltype=capacity'],
+    patterns: ['sourcingoptions?calltype=capacity', 'calltype=capacity', 'delivery-capacity', 'capacity'],
   },
   {
     key: 'reserveDelivery',
     label: 'Reserve Delivery',
-    patterns: ['reservedelivery'],
+    patterns: ['reservedelivery', 'reserve-delivery', 'reserve_delivery', 'reserve/delivery', 'delivery/reserve', 'appointments/reservations', 'reservation', 'reservations'],
   },
 ]);
 

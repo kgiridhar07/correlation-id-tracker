@@ -49,7 +49,10 @@ test('normalizes config and clamps storage limits', () => {
   assertDeepEqual(config.urlFilters, ['api']);
   assertDeepEqual(config.correlationHeaders, ['x-trace-id', 'request-id']);
   assertDeepEqual(config.pageDataWatchers, [{ label: 'Cart ID', path: 'digitalData.cart.cartId' }]);
-  assertDeepEqual(config.orderFlowMilestones.map((milestone) => milestone.patterns[0]), ['/v1/source/options', '/v1/capacity/check', '/v1/delivery/reserve']);
+  assertEqual(config.orderFlowMilestones[0].patterns.includes('/v1/source/options'), true);
+  assertEqual(config.orderFlowMilestones[1].patterns.includes('/v1/capacity/check'), true);
+  assertEqual(config.orderFlowMilestones[2].patterns.includes('/v1/delivery/reserve'), true);
+  assertEqual(config.orderFlowMilestones[2].patterns.includes('appointments/reservations'), true);
   assertEqual(config.pageDataPollMs, 250);
   assertEqual(config.pageDataDurationSeconds, 300);
   assertDeepEqual(config.reportRecipients, ['sre-team@example.com', 'manager@example.com']);
@@ -228,6 +231,21 @@ test('builds one order flow row from page values and network milestones', () => 
   assertEqual(rows[0].lastUpdated, now - 680);
   assertEqual(rows[0].sourcingOptions.correlationId, 'SRC-CORR');
   assertEqual(rows[0].capacity.correlationId, 'CAP-CORR');
+  assertEqual(rows[0].reserveDelivery.correlationId, 'RES-CORR');
+});
+
+test('matches reserve delivery URL variants for order flow rows', () => {
+  const now = 1000000;
+  const events = [
+    { requestId: 'reserve-variant', correlationId: 'TRACK-1', headerName: 'order-tracking-id', timestamp: now - 200, sourceType: 'request-header', method: 'POST', tabId: 7, url: 'https://api.example.com/appointments/reservations' },
+    { requestId: 'reserve-variant', correlationId: 'RES-CORR', headerName: 'usom-correlationid', timestamp: now - 199, sourceType: 'request-header', method: 'POST', tabId: 7, url: 'https://api.example.com/appointments/reservations' },
+  ];
+  const rows = buildOrderFlowRows(events, {}, normalizeOrderFlowMilestones([
+    'Sourcing Options | sourcingOptions',
+    'Capacity | callType=capacity',
+    'Reserve Delivery | reserveDelivery',
+  ]));
+  assertEqual(rows.length, 1);
   assertEqual(rows[0].reserveDelivery.correlationId, 'RES-CORR');
 });
 

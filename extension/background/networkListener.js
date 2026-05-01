@@ -11,7 +11,6 @@
 import { SOURCE_TYPES, RING_BUFFER } from '../utils/constants.js';
 import { getExtensionApi } from '../utils/browserApi.js';
 import { getConfig } from '../utils/configManager.js';
-import { isRelevantUrl } from '../utils/helpers.js';
 import { extractCorrelationIds } from './correlationExtractor.js';
 import { queueEvent } from './storageManager.js';
 import { broadcastNewEvent } from './messageBus.js';
@@ -169,7 +168,7 @@ function addWebRequestListener(event, listener, filter, extraInfoSpec) {
 }
 
 function shouldCaptureOrderFlowRequest(url) {
-  return isRelevantUrl(url) && isOrderFlowMilestoneUrl(url);
+  return isOrderFlowMilestoneUrl(url);
 }
 
 function isOrderFlowMilestoneUrl(url) {

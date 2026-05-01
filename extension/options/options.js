@@ -3,7 +3,6 @@ import { sendRuntimeMessage } from '../utils/browserApi.js';
 import { formatOrderFlowMilestoneLines } from '../utils/flowUtils.js';
 
 const form = document.getElementById('optionsForm');
-const urlFilters = document.getElementById('urlFilters');
 const orderFlowMilestones = document.getElementById('orderFlowMilestones');
 const reportRecipients = document.getElementById('reportRecipients');
 const maxEvents = document.getElementById('maxEvents');
@@ -50,7 +49,7 @@ async function saveOptions(config) {
 
 function readForm() {
   return {
-    urlFilters: urlFilters.value.split('\n'),
+    urlFilters: DEFAULT_CONFIG.urlFilters,
     correlationHeaders: DEFAULT_CONFIG.correlationHeaders,
     pageDataWatchers: [],
     orderFlowMilestones: orderFlowMilestones.value.split('\n'),
@@ -63,7 +62,6 @@ function readForm() {
 }
 
 function fillForm(config) {
-  urlFilters.value = config.urlFilters.join('\n');
   orderFlowMilestones.value = formatOrderFlowMilestoneLines(config.orderFlowMilestones || []);
   reportRecipients.value = (config.reportRecipients || []).join('\n');
   pageDataPollMs.value = config.pageDataPollMs;

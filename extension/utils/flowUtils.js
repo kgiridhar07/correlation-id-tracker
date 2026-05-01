@@ -87,10 +87,12 @@ export function normalizeOrderFlowMilestones(value = ORDER_FLOW_MILESTONES) {
   }
 
   return Array.from(nextByKey.values()).map((milestone) => {
-    const patterns = Array.from(new Set(milestone.patterns.map((pattern) => pattern.trim().toLowerCase()).filter(Boolean)));
-    return patterns.length
-      ? { ...milestone, patterns }
-      : { ...defaultsByKey.get(milestone.key), patterns: [...defaultsByKey.get(milestone.key).patterns] };
+    const defaultMilestone = defaultsByKey.get(milestone.key);
+    const patterns = Array.from(new Set([
+      ...defaultMilestone.patterns,
+      ...milestone.patterns,
+    ].map((pattern) => pattern.trim().toLowerCase()).filter(Boolean)));
+    return { ...milestone, patterns };
   });
 }
 
