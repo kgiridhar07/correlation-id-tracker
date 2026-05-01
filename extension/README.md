@@ -121,7 +121,7 @@ Defaults are in [`extension/utils/constants.js`](extension/utils/constants.js), 
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `urlFilters` | `[]` | Legacy setting; order-flow network capture is gated by milestone URL patterns |
+| `urlFilters` | `[]` | Optional saved URL substrings kept for compatibility; order-flow network capture is gated by milestone URL patterns |
 | `correlationHeaders` | `['order-tracking-id', 'usom-correlationid']` | Legacy setting; order-flow capture is limited to `order-tracking-id` and `usom-correlationid` |
 | `pageDataWatchers` | `[]` | Legacy setting; custom page globals are not captured in strict order-flow mode |
 | `pageDataPollMs` | `1,000` | Page-data polling interval |

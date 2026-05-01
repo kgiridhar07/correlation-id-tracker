@@ -15,6 +15,12 @@
 
     <form id="optionsForm" class="settings-form">
       <section class="panel">
+        <label for="urlFilters">URL filters</label>
+        <textarea id="urlFilters" rows="6" spellcheck="false"></textarea>
+        <p>Saved for compatibility. Order-flow capture uses the milestone URL patterns below.</p>
+      </section>
+
+      <section class="panel">
         <label for="orderFlowMilestones">Order flow milestone URL patterns</label>
         <textarea id="orderFlowMilestones" rows="6" spellcheck="false" placeholder="Sourcing Options | sourcingoptions&#10;Capacity | sourcingoptions?calltype=capacity&#10;Reserve Delivery | reservedelivery"></textarea>
         <p>One milestone per line: label, pipe, then URL match text. Use Sourcing Options, Capacity, and Reserve Delivery labels.</p>
