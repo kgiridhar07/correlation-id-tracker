@@ -48,8 +48,9 @@ jobs:
 
           cat /tmp/correlation-tracker-test-dom.html
           grep -q 'data-tests-done="true"' /tmp/correlation-tracker-test-dom.html
-          grep -q '18 passed, 0 failed' /tmp/correlation-tracker-test-dom.html
+          grep -q '19 passed, 0 failed' /tmp/correlation-tracker-test-dom.html
           grep -q 'PASS - builds one order flow row from page values and network milestones' /tmp/correlation-tracker-test-dom.html
+          grep -q 'PASS - attaches untracked reserve correlation to a two SKU order row' /tmp/correlation-tracker-test-dom.html
           grep -q 'PASS - keeps previous order flow rows when another flow is captured' /tmp/correlation-tracker-test-dom.html
           grep -q 'PASS - persists captured order flow events without dropping previous rows' /tmp/correlation-tracker-test-dom.html
 
