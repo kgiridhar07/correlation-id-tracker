@@ -158,17 +158,15 @@ Use **Auto Scan** from the popup to reveal likely order page sections such as or
 
 Use **Run Flow** after entering SKU and Customer to automate the common logged-in path: search SKU, select SKU, add to cart, view cart, select customer, search customer, choose customer, open delivery options, and schedule delivery. The flow captures page data after every step and still blocks final order/payment style actions such as place order, submit order, confirm order, pay, purchase, delete, remove, and cancel.
 
-Run Flow enters data by using the SKU and Customer values from the popup. The DOM targets are configurable in Options under **Order automation selectors**. Configure lines such as:
+Run Flow enters data by using the SKU and Customer values from the popup. The DOM targets and optional default values are configurable in Options under **Order automation selectors**. Configure lines such as:
 
 ```text
-SKU Search Input | input[name="sku"]
+SKU Search Input | input[name="sku"] | 1003236000
 Add To Cart Button | [data-testid="add-to-cart"]
-Customer Search Input | input[name="customerSearch"]
+Customer Search Input | input[name="customerSearch"] | Rajesh Kumar M1
 ```
 
-Each line is `target label | CSS selector`, and semicolons can separate fallback selectors. When a selector is configured, it is used before text/label guessing.
-
-Options can also store default Run Flow values for SKU and Customer. Popup values are used first; if either popup field is blank, Run Flow uses the corresponding default from Options.
+Each line is `element name | CSS selector | default value`, and semicolons can separate fallback selectors. Button rows usually leave the default value blank. Popup values are used first; if either popup field is blank, Run Flow uses the corresponding default value from the configured element row.
 
 Automatic values:
 

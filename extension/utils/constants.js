@@ -40,21 +40,16 @@ export const ORDER_FLOW_MILESTONES = Object.freeze([
 
 /** Optional selectors used by guided order automation before text-based fallback. */
 export const ORDER_AUTOMATION_SELECTORS = Object.freeze([
-  { key: 'skuSearchInput', label: 'SKU Search Input', selectors: [] },
-  { key: 'skuResult', label: 'SKU Result', selectors: [] },
-  { key: 'addToCartButton', label: 'Add To Cart Button', selectors: [] },
-  { key: 'viewCartButton', label: 'View Cart Button', selectors: [] },
-  { key: 'selectCustomerButton', label: 'Select Customer Button', selectors: [] },
-  { key: 'customerSearchInput', label: 'Customer Search Input', selectors: [] },
-  { key: 'customerResult', label: 'Customer Result', selectors: [] },
-  { key: 'deliveryOptionsButton', label: 'Delivery Options Button', selectors: [] },
-  { key: 'scheduleDeliveryButton', label: 'Schedule Delivery Button', selectors: [] },
+  { key: 'skuSearchInput', label: 'SKU Search Input', selectors: [], defaultValue: '' },
+  { key: 'skuResult', label: 'SKU Result', selectors: [], defaultValue: '' },
+  { key: 'addToCartButton', label: 'Add To Cart Button', selectors: [], defaultValue: '' },
+  { key: 'viewCartButton', label: 'View Cart Button', selectors: [], defaultValue: '' },
+  { key: 'selectCustomerButton', label: 'Select Customer Button', selectors: [], defaultValue: '' },
+  { key: 'customerSearchInput', label: 'Customer Search Input', selectors: [], defaultValue: '' },
+  { key: 'customerResult', label: 'Customer Result', selectors: [], defaultValue: '' },
+  { key: 'deliveryOptionsButton', label: 'Delivery Options Button', selectors: [], defaultValue: '' },
+  { key: 'scheduleDeliveryButton', label: 'Schedule Delivery Button', selectors: [], defaultValue: '' },
 ]);
-
-export const ORDER_AUTOMATION_VALUES = Object.freeze({
-  sku: '',
-  customer: '',
-});
 
 /** Persisted user configuration */
 export const CONFIG = Object.freeze({
@@ -91,7 +86,6 @@ export const DEFAULT_CONFIG = Object.freeze({
   pageDataDurationSeconds: 120,
   orderFlowMilestones: ORDER_FLOW_MILESTONES,
   orderAutomationSelectors: ORDER_AUTOMATION_SELECTORS,
-  orderAutomationValues: ORDER_AUTOMATION_VALUES,
   reportRecipients: [],
   maxEvents: STORAGE_LIMITS.MAX_EVENTS,
   retentionHours: 24,

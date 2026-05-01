@@ -164,14 +164,14 @@
   }
 
   async function runOrderWorkflow(data) {
-    const sku = normalizeText(data.sku);
-    const customer = normalizeText(data.customer);
-    if (!sku || !customer) throw new Error('SKU and customer are required');
-
     if (!activeConfig) {
       const response = await sendRuntimeMessage({ type: 'GET_CONFIG' });
       if (response && response.success) activeConfig = response.data;
     }
+
+    const sku = normalizeText(data.sku) || getConfiguredDefaultValue('skuSearchInput');
+    const customer = normalizeText(data.customer) || getConfiguredDefaultValue('customerSearchInput');
+    if (!sku || !customer) throw new Error('SKU and customer are required');
 
     const steps = [];
     await recordWorkflowStep(steps, 'Search SKU', () => searchForValue(sku, ['sku', 'search', 'product', 'item'], 'skuSearchInput'));
@@ -305,6 +305,14 @@
       : [];
     const item = selectors.find((entry) => entry.key === selectorKey);
     return item && Array.isArray(item.selectors) ? item.selectors.filter(Boolean) : [];
+  }
+
+  function getConfiguredDefaultValue(selectorKey) {
+    const selectors = activeConfig && Array.isArray(activeConfig.orderAutomationSelectors)
+      ? activeConfig.orderAutomationSelectors
+      : [];
+    const item = selectors.find((entry) => entry.key === selectorKey);
+    return item ? normalizeText(item.defaultValue) : '';
   }
 
   function findClickableByText(texts, options = {}) {

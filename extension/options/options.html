@@ -28,19 +28,8 @@
 
       <section class="panel">
         <label for="orderAutomationSelectors">Order automation selectors</label>
-        <textarea id="orderAutomationSelectors" rows="10" spellcheck="false" placeholder="SKU Search Input | input[name='sku']&#10;Add To Cart Button | [data-testid='add-to-cart']"></textarea>
-        <p>Optional. One line per automation target: label, pipe, then CSS selector. Use semicolons for fallback selectors.</p>
-      </section>
-
-      <section class="grid-panel">
-        <div class="field">
-          <label for="defaultAutomationSku">Default automation SKU</label>
-          <input id="defaultAutomationSku" type="text" autocomplete="off" spellcheck="false">
-        </div>
-        <div class="field">
-          <label for="defaultAutomationCustomer">Default automation customer</label>
-          <input id="defaultAutomationCustomer" type="text" autocomplete="off" spellcheck="false">
-        </div>
+        <textarea id="orderAutomationSelectors" rows="10" spellcheck="false" placeholder="SKU Search Input | input[name='sku'] | 1003236000&#10;Customer Search Input | input[name='customerSearch'] | Rajesh Kumar M1&#10;Add To Cart Button | [data-testid='add-to-cart'] |"></textarea>
+        <p>Optional. One line per target: element name, pipe, CSS selector, pipe, default value. Use semicolons for fallback selectors.</p>
       </section>
 
       <section class="panel">

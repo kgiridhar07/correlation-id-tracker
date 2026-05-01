@@ -483,7 +483,7 @@ async function readResolvedAutomationInputs() {
   if (localValues.sku && localValues.customer) return localValues;
 
   const config = await getConfig();
-  const defaults = config.orderAutomationValues || {};
+  const defaults = getAutomationDefaultValues(config);
   return {
     sku: localValues.sku || String(defaults.sku || '').trim(),
     customer: localValues.customer || String(defaults.customer || '').trim(),
@@ -494,13 +494,26 @@ async function loadAutomationState() {
   try {
     const stored = JSON.parse(localStorage.getItem(AUTOMATION_STORAGE_KEY)) || {};
     const config = await getConfig();
-    const defaults = config.orderAutomationValues || {};
+    const defaults = getAutomationDefaultValues(config);
     automationSku.value = stored.sku || defaults.sku || '';
     automationCustomer.value = stored.customer || defaults.customer || '';
   } catch (_err) {
     automationSku.value = '';
     automationCustomer.value = '';
   }
+}
+
+function getAutomationDefaultValues(config) {
+  const selectors = Array.isArray(config.orderAutomationSelectors) ? config.orderAutomationSelectors : [];
+  return {
+    sku: getAutomationDefaultValue(selectors, 'skuSearchInput'),
+    customer: getAutomationDefaultValue(selectors, 'customerSearchInput'),
+  };
+}
+
+function getAutomationDefaultValue(selectors, key) {
+  const item = selectors.find((selector) => selector.key === key);
+  return item ? String(item.defaultValue || '').trim() : '';
 }
 
 function saveAutomationState(value = readAutomationInputs()) {
