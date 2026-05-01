@@ -448,7 +448,7 @@ async function runAutoScan() {
 }
 
 async function runOrderWorkflow() {
-  const automationState = readAutomationInputs();
+  const automationState = await readResolvedAutomationInputs();
   saveAutomationState(automationState);
   if (!automationState.sku || !automationState.customer) {
     setStatus('Enter SKU and customer before Run Flow');
@@ -478,11 +478,25 @@ function readAutomationInputs() {
   };
 }
 
-function loadAutomationState() {
+async function readResolvedAutomationInputs() {
+  const localValues = readAutomationInputs();
+  if (localValues.sku && localValues.customer) return localValues;
+
+  const config = await getConfig();
+  const defaults = config.orderAutomationValues || {};
+  return {
+    sku: localValues.sku || String(defaults.sku || '').trim(),
+    customer: localValues.customer || String(defaults.customer || '').trim(),
+  };
+}
+
+async function loadAutomationState() {
   try {
     const stored = JSON.parse(localStorage.getItem(AUTOMATION_STORAGE_KEY)) || {};
-    automationSku.value = stored.sku || '';
-    automationCustomer.value = stored.customer || '';
+    const config = await getConfig();
+    const defaults = config.orderAutomationValues || {};
+    automationSku.value = stored.sku || defaults.sku || '';
+    automationCustomer.value = stored.customer || defaults.customer || '';
   } catch (_err) {
     automationSku.value = '';
     automationCustomer.value = '';

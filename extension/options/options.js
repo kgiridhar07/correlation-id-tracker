@@ -7,6 +7,8 @@ const form = document.getElementById('optionsForm');
 const urlFilters = document.getElementById('urlFilters');
 const orderFlowMilestones = document.getElementById('orderFlowMilestones');
 const orderAutomationSelectors = document.getElementById('orderAutomationSelectors');
+const defaultAutomationSku = document.getElementById('defaultAutomationSku');
+const defaultAutomationCustomer = document.getElementById('defaultAutomationCustomer');
 const reportRecipients = document.getElementById('reportRecipients');
 const maxEvents = document.getElementById('maxEvents');
 const retentionHours = document.getElementById('retentionHours');
@@ -57,6 +59,10 @@ function readForm() {
     pageDataWatchers: [],
     orderFlowMilestones: orderFlowMilestones.value.split('\n'),
     orderAutomationSelectors: orderAutomationSelectors.value.split('\n'),
+    orderAutomationValues: {
+      sku: defaultAutomationSku.value,
+      customer: defaultAutomationCustomer.value,
+    },
     pageDataPollMs: pageDataPollMs.value,
     pageDataDurationSeconds: pageDataDurationSeconds.value,
     reportRecipients: reportRecipients.value.split('\n'),
@@ -69,6 +75,8 @@ function fillForm(config) {
   urlFilters.value = config.urlFilters.join('\n');
   orderFlowMilestones.value = formatOrderFlowMilestoneLines(config.orderFlowMilestones || []);
   orderAutomationSelectors.value = formatOrderAutomationSelectorLines(config.orderAutomationSelectors || []);
+  defaultAutomationSku.value = config.orderAutomationValues && config.orderAutomationValues.sku || '';
+  defaultAutomationCustomer.value = config.orderAutomationValues && config.orderAutomationValues.customer || '';
   reportRecipients.value = (config.reportRecipients || []).join('\n');
   pageDataPollMs.value = config.pageDataPollMs;
   pageDataDurationSeconds.value = config.pageDataDurationSeconds;

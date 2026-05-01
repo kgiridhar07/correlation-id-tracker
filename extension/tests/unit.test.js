@@ -41,6 +41,7 @@ test('normalizes config and clamps storage limits', () => {
     pageDataWatchers: 'Cart ID | digitalData.cart.cartId',
     orderFlowMilestones: 'Sourcing Options | /v1/source/options\nCapacity | /v1/capacity/check\nReserve Delivery | /v1/delivery/reserve',
     orderAutomationSelectors: 'SKU Search Input | input[name="sku"]; [data-testid="sku-search"]\nAdd To Cart Button | [data-testid="add-to-cart"]',
+    orderAutomationValues: { sku: '1003236000', customer: 'Rajesh Kumar M1' },
     pageDataPollMs: '50',
     pageDataDurationSeconds: '999',
     reportRecipients: 'SRE-Team@Example.com\nnot-email\nmanager@example.com',
@@ -56,6 +57,7 @@ test('normalizes config and clamps storage limits', () => {
   assertEqual(config.orderFlowMilestones[2].patterns.includes('appointments/reservations'), true);
   assertDeepEqual(config.orderAutomationSelectors.find((item) => item.key === 'skuSearchInput').selectors, ['input[name="sku"]', '[data-testid="sku-search"]']);
   assertDeepEqual(config.orderAutomationSelectors.find((item) => item.key === 'addToCartButton').selectors, ['[data-testid="add-to-cart"]']);
+  assertDeepEqual(config.orderAutomationValues, { sku: '1003236000', customer: 'Rajesh Kumar M1' });
   assertEqual(config.pageDataPollMs, 250);
   assertEqual(config.pageDataDurationSeconds, 300);
   assertDeepEqual(config.reportRecipients, ['sre-team@example.com', 'manager@example.com']);

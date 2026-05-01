@@ -168,6 +168,8 @@ Customer Search Input | input[name="customerSearch"]
 
 Each line is `target label | CSS selector`, and semicolons can separate fallback selectors. When a selector is configured, it is used before text/label guessing.
 
+Options can also store default Run Flow values for SKU and Customer. Popup values are used first; if either popup field is blank, Run Flow uses the corresponding default from Options.
+
 Automatic values:
 
 ```text

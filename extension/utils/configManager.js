@@ -25,6 +25,13 @@ function normalizeEmailList(value) {
   return Array.from(new Set(cleaned)).slice(0, 25);
 }
 
+function normalizeOrderAutomationValues(value = DEFAULT_CONFIG.orderAutomationValues) {
+  return {
+    sku: String(value && value.sku || '').trim(),
+    customer: String(value && value.customer || '').trim(),
+  };
+}
+
 function normalizeOrderAutomationSelectors(value = DEFAULT_CONFIG.orderAutomationSelectors) {
   const defaultsByKey = new Map(DEFAULT_CONFIG.orderAutomationSelectors.map((item) => [item.key, item]));
   const nextByKey = new Map(DEFAULT_CONFIG.orderAutomationSelectors.map((item) => [
@@ -94,6 +101,7 @@ export function normalizeConfig(value = {}) {
     pageDataWatchers: normalizePageDataWatchers(value.pageDataWatchers),
     orderFlowMilestones: normalizeOrderFlowMilestones(value.orderFlowMilestones),
     orderAutomationSelectors: normalizeOrderAutomationSelectors(value.orderAutomationSelectors),
+    orderAutomationValues: normalizeOrderAutomationValues(value.orderAutomationValues),
     pageDataPollMs: Number.isFinite(pageDataPollMs) ? clamp(pageDataPollMs, 250, 10000) : DEFAULT_CONFIG.pageDataPollMs,
     pageDataDurationSeconds: Number.isFinite(pageDataDurationSeconds) ? clamp(pageDataDurationSeconds, 1, 300) : DEFAULT_CONFIG.pageDataDurationSeconds,
     reportRecipients: normalizeEmailList(value.reportRecipients),
@@ -139,6 +147,7 @@ export function getConfig() {
     pageDataWatchers: activeConfig.pageDataWatchers.map((watcher) => ({ ...watcher })),
     orderFlowMilestones: activeConfig.orderFlowMilestones.map((milestone) => ({ ...milestone, patterns: [...milestone.patterns] })),
     orderAutomationSelectors: activeConfig.orderAutomationSelectors.map((item) => ({ ...item, selectors: [...item.selectors] })),
+    orderAutomationValues: { ...activeConfig.orderAutomationValues },
     pageDataPollMs: activeConfig.pageDataPollMs,
     pageDataDurationSeconds: activeConfig.pageDataDurationSeconds,
     reportRecipients: [...activeConfig.reportRecipients],

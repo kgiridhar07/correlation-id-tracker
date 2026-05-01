@@ -51,6 +51,11 @@ export const ORDER_AUTOMATION_SELECTORS = Object.freeze([
   { key: 'scheduleDeliveryButton', label: 'Schedule Delivery Button', selectors: [] },
 ]);
 
+export const ORDER_AUTOMATION_VALUES = Object.freeze({
+  sku: '',
+  customer: '',
+});
+
 /** Persisted user configuration */
 export const CONFIG = Object.freeze({
   STORAGE_KEY: 'correlationTrackerConfig',
@@ -86,6 +91,7 @@ export const DEFAULT_CONFIG = Object.freeze({
   pageDataDurationSeconds: 120,
   orderFlowMilestones: ORDER_FLOW_MILESTONES,
   orderAutomationSelectors: ORDER_AUTOMATION_SELECTORS,
+  orderAutomationValues: ORDER_AUTOMATION_VALUES,
   reportRecipients: [],
   maxEvents: STORAGE_LIMITS.MAX_EVENTS,
   retentionHours: 24,
