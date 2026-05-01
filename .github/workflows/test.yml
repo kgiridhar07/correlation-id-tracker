@@ -54,6 +54,18 @@ jobs:
           grep -q 'PASS - keeps previous order flow rows when another flow is captured' /tmp/correlation-tracker-test-dom.html
           grep -q 'PASS - persists captured order flow events without dropping previous rows' /tmp/correlation-tracker-test-dom.html
 
+      - name: Run order workflow simulation
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome --headless --disable-gpu --no-sandbox --virtual-time-budget=20000 --dump-dom \
+            http://127.0.0.1:4173/extension/tests/order-workflow-sim.html > /tmp/correlation-tracker-workflow-dom.html
+
+          cat /tmp/correlation-tracker-workflow-dom.html
+          grep -q 'data-simulation-done="true"' /tmp/correlation-tracker-workflow-dom.html
+          grep -q '1 passed, 0 failed' /tmp/correlation-tracker-workflow-dom.html
+          grep -q 'PASS - simulates configured order workflow automation' /tmp/correlation-tracker-workflow-dom.html
+
       - name: Stop local test server
         if: always()
         shell: bash

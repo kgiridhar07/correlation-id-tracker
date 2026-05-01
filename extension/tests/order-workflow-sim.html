@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Workflow Simulation</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; background: #1e1e1e; color: #e0e0e0; }
+    h1 { color: #569cd6; }
+    .pass { color: #b5cea8; }
+    .fail { color: #f48771; }
+    [hidden] { display: none !important; }
+    button, input { display: block; margin: 8px 0; padding: 8px; min-width: 220px; min-height: 32px; }
+    .label, .description, [data-testid="product-description__sku-number"], .customer-card__name { min-width: 220px; min-height: 20px; }
+    pre { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Order Workflow Simulation</h1>
+
+  <section id="mockOrderPage">
+    <input id="skuSearch" name="sku" aria-label="SKU Search Input" placeholder="SKU Search">
+    <button id="skuResult" data-testid="sku-result" hidden>Select SKU</button>
+    <button id="addToCart" data-testid="add-to-cart" hidden>Add To Cart</button>
+    <button id="viewCart" data-testid="view-cart" hidden>View Cart</button>
+    <button id="selectCustomer" data-testid="select-customer" hidden>Select Customer</button>
+    <input id="customerSearch" name="customerSearch" aria-label="Customer Search Input" placeholder="Customer Search" hidden>
+    <button id="customerResult" data-testid="customer-result" hidden>Select Customer Result</button>
+    <button id="deliveryOptions" data-testid="delivery-options" hidden>Delivery Options</button>
+    <button id="scheduleDelivery" data-testid="schedule-delivery" hidden>Schedule Delivery</button>
+
+    <div id="capturedPageValues"></div>
+  </section>
+
+  <ul id="results"></ul>
+  <pre id="summary"></pre>
+
+  <script>
+    const capturedMessages = [];
+    const clickLog = [];
+    const listeners = [];
+    const config = {
+      pageDataPollMs: 1000,
+      pageDataDurationSeconds: 120,
+      orderAutomationSelectors: [
+        { key: 'skuSearchInput', label: 'SKU Search Input', selectors: ['#skuSearch'], defaultValue: '1003236000' },
+        { key: 'skuResult', label: 'SKU Result', selectors: ['#skuResult'], defaultValue: '' },
+        { key: 'addToCartButton', label: 'Add To Cart Button', selectors: ['#addToCart'], defaultValue: '' },
+        { key: 'viewCartButton', label: 'View Cart Button', selectors: ['#viewCart'], defaultValue: '' },
+        { key: 'selectCustomerButton', label: 'Select Customer Button', selectors: ['#selectCustomer'], defaultValue: '' },
+        { key: 'customerSearchInput', label: 'Customer Search Input', selectors: ['#customerSearch'], defaultValue: 'Rajesh Kumar M1' },
+        { key: 'customerResult', label: 'Customer Result', selectors: ['#customerResult'], defaultValue: '' },
+        { key: 'deliveryOptionsButton', label: 'Delivery Options Button', selectors: ['#deliveryOptions'], defaultValue: '' },
+        { key: 'scheduleDeliveryButton', label: 'Schedule Delivery Button', selectors: ['#scheduleDelivery'], defaultValue: '' },
+      ],
+    };
+
+    window.chrome = {
+      runtime: {
+        lastError: null,
+        onMessage: {
+          addListener(listener) {
+            listeners.push(listener);
+          },
+        },
+        sendMessage(message, callback) {
+          if (message.type === 'GET_CONFIG') {
+            callback({ success: true, data: config });
+            return;
+          }
+          if (message.type === 'CAPTURE_PAGE_DATA') {
+            capturedMessages.push(message.data);
+            callback({ success: true });
+            return;
+          }
+          callback({ success: true });
+        },
+      },
+    };
+
+    function show(id) {
+      document.getElementById(id).hidden = false;
+    }
+
+    function addPageValue(markup) {
+      document.getElementById('capturedPageValues').insertAdjacentHTML('beforeend', markup);
+    }
+
+    document.getElementById('skuSearch').addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      clickLog.push(`search-sku:${event.target.value}`);
+      document.getElementById('skuResult').textContent = `Select ${event.target.value}`;
+      show('skuResult');
+    });
+
+    document.getElementById('skuResult').addEventListener('click', () => {
+      clickLog.push('sku-result');
+      addPageValue('<div data-testid="product-description__sku-number">1003236000</div>');
+      show('addToCart');
+    });
+
+    document.getElementById('addToCart').addEventListener('click', () => {
+      clickLog.push('add-cart');
+      show('viewCart');
+    });
+
+    document.getElementById('viewCart').addEventListener('click', () => {
+      clickLog.push('view-cart');
+      show('selectCustomer');
+    });
+
+    document.getElementById('selectCustomer').addEventListener('click', () => {
+      clickLog.push('select-customer');
+      show('customerSearch');
+    });
+
+    document.getElementById('customerSearch').addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      clickLog.push(`search-customer:${event.target.value}`);
+      document.getElementById('customerResult').textContent = `Select ${event.target.value}`;
+      show('customerResult');
+    });
+
+    document.getElementById('customerResult').addEventListener('click', () => {
+      clickLog.push('customer-result');
+      addPageValue('<div class="customer-card__name"><span class="pal--type-style-05">Rajesh Kumar M1</span></div>');
+      show('deliveryOptions');
+    });
+
+    document.getElementById('deliveryOptions').addEventListener('click', () => {
+      clickLog.push('delivery-options');
+      addPageValue('<div data-testid="fulfillment-steps"><span class="label">DELIVERY ADDRESS</span><span class="description">2422 Cumberland SE unit 555 Atlanta, GA 30339</span></div>');
+      addPageValue('<div data-testid="fulfillment-steps"><span class="label">DELIVERY OPTIONS</span><span class="description">Scheduled Delivery</span></div>');
+      show('scheduleDelivery');
+    });
+
+    document.getElementById('scheduleDelivery').addEventListener('click', () => {
+      clickLog.push('schedule-delivery');
+      addPageValue('<div data-testid="order-number">H9179-307080</div>');
+    });
+
+    window.__runContentWorkflow = function runContentWorkflow(message) {
+      return new Promise((resolve) => {
+        const listener = listeners[listeners.length - 1];
+        listener(message, {}, resolve);
+      });
+    };
+
+    window.__simulationState = { capturedMessages, clickLog };
+  </script>
+  <script src="../content/pageDataContent.js"></script>
+  <script>
+    const results = document.getElementById('results');
+    const summary = document.getElementById('summary');
+    let passed = 0;
+    let failed = 0;
+
+    function pass(name) {
+      passed++;
+      const item = document.createElement('li');
+      item.className = 'pass';
+      item.textContent = `PASS - ${name}`;
+      results.appendChild(item);
+    }
+
+    function fail(name, error) {
+      failed++;
+      const item = document.createElement('li');
+      item.className = 'fail';
+      item.textContent = `FAIL - ${name}: ${error.message}`;
+      results.appendChild(item);
+    }
+
+    function assertEqual(actual, expected, message) {
+      if (actual !== expected) throw new Error(`${message || 'value mismatch'}: expected ${expected}, got ${actual}`);
+    }
+
+    function assertIncludes(values, expected, message) {
+      if (!values.includes(expected)) throw new Error(`${message || 'missing value'}: ${expected}`);
+    }
+
+    async function runSimulation() {
+      try {
+        const response = await window.__runContentWorkflow({ type: 'RUN_ORDER_WORKFLOW', data: {} });
+        assertEqual(response.success, true, 'workflow success');
+        assertEqual(response.steps.length, 9, 'step count');
+        assertEqual(response.steps.filter((step) => step.success).length, 9, 'successful step count');
+        assertEqual(document.getElementById('skuSearch').value, '1003236000', 'SKU input value');
+        assertEqual(document.getElementById('customerSearch').value, 'Rajesh Kumar M1', 'customer input value');
+
+        const labels = window.__simulationState.capturedMessages.map((message) => message.label);
+        const values = window.__simulationState.capturedMessages.map((message) => message.value);
+        assertIncludes(labels, 'SKU', 'captured labels');
+        assertIncludes(labels, 'Customer', 'captured labels');
+        assertIncludes(labels, 'Address', 'captured labels');
+        assertIncludes(labels, 'Delivery Type', 'captured labels');
+        assertIncludes(labels, 'Quote ID', 'captured labels');
+        assertIncludes(values, '1003236000', 'captured values');
+        assertIncludes(values, 'Rajesh Kumar M1', 'captured values');
+        assertIncludes(values, 'Scheduled Delivery', 'captured values');
+        assertIncludes(values, 'H9179-307080', 'captured values');
+        assertEqual(window.__simulationState.clickLog.join(' > '), 'search-sku:1003236000 > sku-result > add-cart > view-cart > select-customer > search-customer:Rajesh Kumar M1 > customer-result > delivery-options > schedule-delivery', 'click order');
+        pass('simulates configured order workflow automation');
+      } catch (err) {
+        fail('simulates configured order workflow automation', err);
+      }
+
+      summary.textContent = `${passed} passed, ${failed} failed`;
+      document.body.dataset.simulationDone = 'true';
+    }
+
+    setTimeout(runSimulation, 50);
+  </script>
+</body>
+</html>
