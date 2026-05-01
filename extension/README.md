@@ -168,6 +168,8 @@ Customer Search Input | input[name="customerSearch"] | Rajesh Kumar M1
 
 Each line is `element name | CSS selector | default value`, and semicolons can separate fallback selectors. Button rows usually leave the default value blank. Popup values are used first; if either popup field is blank, Run Flow uses the corresponding default value from the configured element row.
 
+A visual mock execution page is available at `extension/tests/order-workflow-demo.html`. Open it in a browser and click **Run Mock Execution** to watch the content script type SKU/customer values, click through cart/customer/delivery steps, and capture page fields.
+
 Automatic values:
 
 ```text

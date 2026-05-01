@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Workflow Visual Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: #1f2933;
+      background: #f4f6f8;
+    }
+    header {
+      padding: 18px 24px;
+      background: #17212b;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    h1 { margin: 0; font-size: 18px; font-weight: 650; }
+    .shell {
+      display: grid;
+      grid-template-columns: minmax(520px, 1.4fr) minmax(360px, 0.9fr);
+      gap: 16px;
+      padding: 16px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    .panel {
+      border: 1px solid #d7dee6;
+      border-radius: 6px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .panel h2 {
+      margin: 0;
+      padding: 12px 14px;
+      font-size: 14px;
+      background: #eef3f7;
+      border-bottom: 1px solid #d7dee6;
+    }
+    .content { padding: 14px; }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    button {
+      border: 1px solid #9fb1c1;
+      border-radius: 4px;
+      background: #f9fbfc;
+      color: #17212b;
+      padding: 8px 12px;
+      cursor: pointer;
+      min-height: 36px;
+      font-size: 13px;
+    }
+    button.primary {
+      border-color: #2563eb;
+      background: #2563eb;
+      color: #fff;
+      font-weight: 650;
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+    input {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 10px;
+      border: 1px solid #aebdca;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    label {
+      display: block;
+      margin-bottom: 12px;
+      color: #52616f;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    label span { display: block; margin-bottom: 5px; }
+    .workflow-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .step {
+      border: 1px solid #d7dee6;
+      border-radius: 6px;
+      padding: 12px;
+      background: #fbfcfd;
+      min-height: 108px;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .step.active {
+      border-color: #2563eb;
+      background: #eef5ff;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+    .step.done {
+      border-color: #16a34a;
+      background: #f0fdf4;
+    }
+    .step h3 { margin: 0 0 8px; font-size: 13px; }
+    .step p { margin: 0; color: #657482; font-size: 12px; line-height: 1.4; }
+    .mock-button {
+      display: none;
+      margin-top: 8px;
+      width: 100%;
+      text-align: left;
+    }
+    .mock-button.visible { display: block; }
+    .result-value {
+      display: none;
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      background: #f8fafc;
+      border: 1px dashed #c2ced8;
+      font-size: 12px;
+    }
+    .result-value.visible { display: block; }
+    .log {
+      height: 246px;
+      overflow: auto;
+      border: 1px solid #d7dee6;
+      border-radius: 4px;
+      background: #111827;
+      color: #d1d5db;
+      padding: 10px;
+      font: 12px/1.45 Consolas, "Courier New", monospace;
+      white-space: pre-wrap;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 8px;
+      border-bottom: 1px solid #e5eaf0;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: #52616f; background: #f8fafc; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #e8eef5;
+      color: #334155;
+      font-size: 12px;
+    }
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; }
+      .workflow-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Order Workflow Visual Demo</h1>
+    <div class="toolbar">
+      <span id="status" class="status">Ready</span>
+      <button id="resetDemo">Reset</button>
+      <button id="runDemo" class="primary">Run Mock Execution</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="panel">
+      <h2>Mock Order Website</h2>
+      <div class="content workflow-grid">
+        <section id="stepSkuSearch" class="step">
+          <h3>1. Search SKU</h3>
+          <label><span>SKU Search Input</span><input id="skuSearch" name="sku" aria-label="SKU Search Input" placeholder="Waiting for automation"></label>
+          <p>Run Flow types the default SKU and presses Enter.</p>
+        </section>
+
+        <section id="stepSkuResult" class="step">
+          <h3>2. Select SKU</h3>
+          <button id="skuResult" class="mock-button" data-testid="sku-result">Select SKU</button>
+          <div id="skuCaptured" class="result-value" data-testid="product-description__sku-number"></div>
+          <p>The SKU result appears after the search event.</p>
+        </section>
+
+        <section id="stepCart" class="step">
+          <h3>3. Cart</h3>
+          <button id="addToCart" class="mock-button" data-testid="add-to-cart">Add To Cart</button>
+          <button id="viewCart" class="mock-button" data-testid="view-cart">View Cart</button>
+          <p>Automation clicks add to cart, then view cart.</p>
+        </section>
+
+        <section id="stepCustomer" class="step">
+          <h3>4. Customer</h3>
+          <button id="selectCustomer" class="mock-button" data-testid="select-customer">Select Customer</button>
+          <label id="customerInputWrap" hidden><span>Customer Search Input</span><input id="customerSearch" name="customerSearch" aria-label="Customer Search Input" placeholder="Waiting for automation"></label>
+          <button id="customerResult" class="mock-button" data-testid="customer-result">Select Customer Result</button>
+          <div id="customerCaptured" class="result-value customer-card__name"><span class="pal--type-style-05"></span></div>
+        </section>
+
+        <section id="stepDelivery" class="step">
+          <h3>5. Delivery</h3>
+          <button id="deliveryOptions" class="mock-button" data-testid="delivery-options">Delivery Options</button>
+          <div id="addressCaptured" class="result-value" data-testid="fulfillment-steps"><span class="label">DELIVERY ADDRESS</span><span class="description"></span></div>
+          <div id="deliveryCaptured" class="result-value" data-testid="fulfillment-steps"><span class="label">DELIVERY OPTIONS</span><span class="description"></span></div>
+        </section>
+
+        <section id="stepSchedule" class="step">
+          <h3>6. Schedule</h3>
+          <button id="scheduleDelivery" class="mock-button" data-testid="schedule-delivery">Schedule Delivery</button>
+          <div id="quoteCaptured" class="result-value" data-testid="order-number"></div>
+          <p>Final mock step creates the quote value for capture.</p>
+        </section>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h2>Execution Output</h2>
+      <div class="content">
+        <h3>Event Log</h3>
+        <div id="log" class="log"></div>
+        <h3>Captured Page Data</h3>
+        <table>
+          <thead><tr><th>Field</th><th>Value</th></tr></thead>
+          <tbody id="captureRows"></tbody>
+        </table>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const config = {
+      pageDataPollMs: 1000,
+      pageDataDurationSeconds: 120,
+      orderAutomationSelectors: [
+        { key: 'skuSearchInput', label: 'SKU Search Input', selectors: ['#skuSearch'], defaultValue: '1003236000' },
+        { key: 'skuResult', label: 'SKU Result', selectors: ['#skuResult'], defaultValue: '' },
+        { key: 'addToCartButton', label: 'Add To Cart Button', selectors: ['#addToCart'], defaultValue: '' },
+        { key: 'viewCartButton', label: 'View Cart Button', selectors: ['#viewCart'], defaultValue: '' },
+        { key: 'selectCustomerButton', label: 'Select Customer Button', selectors: ['#selectCustomer'], defaultValue: '' },
+        { key: 'customerSearchInput', label: 'Customer Search Input', selectors: ['#customerSearch'], defaultValue: 'Rajesh Kumar M1' },
+        { key: 'customerResult', label: 'Customer Result', selectors: ['#customerResult'], defaultValue: '' },
+        { key: 'deliveryOptionsButton', label: 'Delivery Options Button', selectors: ['#deliveryOptions'], defaultValue: '' },
+        { key: 'scheduleDeliveryButton', label: 'Schedule Delivery Button', selectors: ['#scheduleDelivery'], defaultValue: '' },
+      ],
+    };
+
+    const listeners = [];
+    const capturedMessages = [];
+    const logEl = document.getElementById('log');
+    const statusEl = document.getElementById('status');
+    const captureRows = document.getElementById('captureRows');
+
+    window.chrome = {
+      runtime: {
+        lastError: null,
+        onMessage: { addListener(listener) { listeners.push(listener); } },
+        sendMessage(message, callback) {
+          if (message.type === 'GET_CONFIG') {
+            callback({ success: true, data: config });
+            return;
+          }
+          if (message.type === 'CAPTURE_PAGE_DATA') {
+            capturedMessages.push(message.data);
+            appendCapture(message.data);
+            addLog(`capture ${message.data.label}: ${message.data.value}`);
+            callback({ success: true });
+            return;
+          }
+          callback({ success: true });
+        },
+      },
+    };
+
+    function setStatus(text) { statusEl.textContent = text; }
+    function addLog(text) {
+      const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+      logEl.textContent += `[${time}] ${text}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    function appendCapture(data) {
+      const row = document.createElement('tr');
+      row.innerHTML = `<td>${escapeHtml(data.label)}</td><td>${escapeHtml(data.value)}</td>`;
+      captureRows.appendChild(row);
+    }
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
+    }
+    function markStep(id, state) {
+      const step = document.getElementById(id);
+      step.classList.remove('active', 'done');
+      if (state) step.classList.add(state);
+    }
+    function showButton(id) { document.getElementById(id).classList.add('visible'); }
+    function showValue(id, value) {
+      const element = document.getElementById(id);
+      element.textContent = value;
+      element.classList.add('visible');
+    }
+    function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+    document.getElementById('skuSearch').addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      markStep('stepSkuSearch', 'done');
+      markStep('stepSkuResult', 'active');
+      document.getElementById('skuResult').textContent = `Select ${event.target.value}`;
+      showButton('skuResult');
+      addLog(`typed SKU ${event.target.value}`);
+    });
+    document.getElementById('skuResult').addEventListener('click', () => {
+      showValue('skuCaptured', '1003236000');
+      markStep('stepSkuResult', 'done');
+      markStep('stepCart', 'active');
+      showButton('addToCart');
+      addLog('clicked SKU result');
+    });
+    document.getElementById('addToCart').addEventListener('click', () => {
+      showButton('viewCart');
+      addLog('clicked Add To Cart');
+    });
+    document.getElementById('viewCart').addEventListener('click', () => {
+      markStep('stepCart', 'done');
+      markStep('stepCustomer', 'active');
+      showButton('selectCustomer');
+      addLog('clicked View Cart');
+    });
+    document.getElementById('selectCustomer').addEventListener('click', () => {
+      document.getElementById('customerInputWrap').hidden = false;
+      addLog('clicked Select Customer');
+    });
+    document.getElementById('customerSearch').addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      document.getElementById('customerResult').textContent = `Select ${event.target.value}`;
+      showButton('customerResult');
+      addLog(`typed customer ${event.target.value}`);
+    });
+    document.getElementById('customerResult').addEventListener('click', () => {
+      document.querySelector('#customerCaptured .pal--type-style-05').textContent = 'Rajesh Kumar M1';
+      document.getElementById('customerCaptured').classList.add('visible');
+      markStep('stepCustomer', 'done');
+      markStep('stepDelivery', 'active');
+      showButton('deliveryOptions');
+      addLog('clicked Customer Result');
+    });
+    document.getElementById('deliveryOptions').addEventListener('click', () => {
+      document.querySelector('#addressCaptured .description').textContent = '2422 Cumberland SE unit 555 Atlanta, GA 30339';
+      document.querySelector('#deliveryCaptured .description').textContent = 'Scheduled Delivery';
+      document.getElementById('addressCaptured').classList.add('visible');
+      document.getElementById('deliveryCaptured').classList.add('visible');
+      markStep('stepDelivery', 'done');
+      markStep('stepSchedule', 'active');
+      showButton('scheduleDelivery');
+      addLog('clicked Delivery Options');
+    });
+    document.getElementById('scheduleDelivery').addEventListener('click', () => {
+      showValue('quoteCaptured', 'H9179-307080');
+      markStep('stepSchedule', 'done');
+      addLog('clicked Schedule Delivery');
+    });
+
+    window.__runContentWorkflow = function runContentWorkflow(message) {
+      return new Promise((resolve) => {
+        listeners[listeners.length - 1](message, {}, resolve);
+      });
+    };
+
+    async function runDemo() {
+      document.getElementById('runDemo').disabled = true;
+      setStatus('Running');
+      addLog('starting RUN_ORDER_WORKFLOW');
+      markStep('stepSkuSearch', 'active');
+      const response = await window.__runContentWorkflow({ type: 'RUN_ORDER_WORKFLOW', data: {} });
+      addLog(`workflow response: ${JSON.stringify({ success: response.success, steps: response.steps && response.steps.map((step) => ({ label: step.label, success: step.success })) })}`);
+      setStatus(response.success ? 'Complete' : 'Failed');
+      document.getElementById('runDemo').disabled = false;
+    }
+
+    document.getElementById('runDemo').addEventListener('click', runDemo);
+    document.getElementById('resetDemo').addEventListener('click', () => location.reload());
+  </script>
+  <script src="../content/pageDataContent.js"></script>
+</body>
+</html>
