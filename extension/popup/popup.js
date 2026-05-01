@@ -19,6 +19,7 @@ const timeFilter = document.getElementById('timeFilter') || fallbackInput('all')
 const duplicateOnly = document.getElementById('duplicateOnly') || fallbackCheckbox(false);
 const collapseDuplicates = document.getElementById('collapseDuplicates') || fallbackCheckbox(false);
 const btnRefresh = document.getElementById('btnRefresh');
+const btnAutoScan = document.getElementById('btnAutoScan');
 const btnOpenDashboard = document.getElementById('btnOpenDashboard');
 const btnOptions = document.getElementById('btnOptions');
 const btnClear = document.getElementById('btnClear');
@@ -425,6 +426,23 @@ async function clearEvents() {
   }
 }
 
+async function runAutoScan() {
+  setStatus('Auto scanning page...');
+  try {
+    const response = await sendMessageToActiveTab({ type: MSG.RUN_ORDER_AUTOMATION });
+    if (response && response.success) {
+      await loadEvents();
+      const clicked = response.clickedCount || 0;
+      const captured = response.capturedCount || 0;
+      setStatus(`Auto scan complete: ${clicked} section${clicked === 1 ? '' : 's'} opened, ${captured} value${captured === 1 ? '' : 's'} captured`);
+      return;
+    }
+    setStatus(response && response.error ? `Auto scan failed: ${response.error}` : 'Auto scan failed');
+  } catch (err) {
+    setStatus(`Auto scan failed: ${err.message}`);
+  }
+}
+
 async function handleTableClick(event) {
   const button = event.target.closest('.btn-copy');
   if (!button) return;
@@ -537,6 +555,44 @@ function sendMessage(msg) {
   return sendRuntimeMessage(msg).catch(() => undefined);
 }
 
+async function sendMessageToActiveTab(message) {
+  const extensionApi = getExtensionApi();
+  if (!extensionApi.tabs || !extensionApi.tabs.query || !extensionApi.tabs.sendMessage) {
+    throw new Error('Active tab messaging is unavailable');
+  }
+
+  const tabs = await queryTabs(extensionApi, { active: true, currentWindow: true });
+  const activeTab = tabs && tabs[0];
+  if (!activeTab || !activeTab.id) throw new Error('Open the popup on the order page');
+  return sendTabMessage(extensionApi, activeTab.id, message);
+}
+
+function queryTabs(extensionApi, queryInfo) {
+  if (globalThis.browser && extensionApi === globalThis.browser) {
+    return extensionApi.tabs.query(queryInfo);
+  }
+  return new Promise((resolve, reject) => {
+    extensionApi.tabs.query(queryInfo, (tabs) => {
+      const lastError = extensionApi.runtime.lastError;
+      if (lastError) reject(new Error(lastError.message));
+      else resolve(tabs || []);
+    });
+  });
+}
+
+function sendTabMessage(extensionApi, tabId, message) {
+  if (globalThis.browser && extensionApi === globalThis.browser) {
+    return extensionApi.tabs.sendMessage(tabId, message);
+  }
+  return new Promise((resolve, reject) => {
+    extensionApi.tabs.sendMessage(tabId, message, (response) => {
+      const lastError = extensionApi.runtime.lastError;
+      if (lastError) reject(new Error(lastError.message));
+      else resolve(response);
+    });
+  });
+}
+
 function setStatus(text) {
   if (statusText) statusText.textContent = text;
 }
@@ -583,6 +639,7 @@ function attachListeners() {
   duplicateOnly.addEventListener('change', refreshDerivedState);
   collapseDuplicates.addEventListener('change', refreshDerivedState);
   btnRefresh.addEventListener('click', loadEvents);
+  if (btnAutoScan) btnAutoScan.addEventListener('click', runAutoScan);
   if (btnOpenDashboard) btnOpenDashboard.addEventListener('click', openDashboard);
   btnOptions.addEventListener('click', openOptions);
   btnClear.addEventListener('click', clearEvents);

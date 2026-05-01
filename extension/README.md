@@ -154,6 +154,8 @@ Email sending uses `mailto:` and opens a draft in the user's configured email cl
 
 Order Flow Capture is designed for SKU-to-delivery troubleshooting. Clear old events, perform the ordering flow, then review the stitched Order Flow table. Each row is keyed by the shared `order-tracking-id` captured on the network requests.
 
+Use **Auto Scan** from the popup to reveal likely order page sections such as order, quote, product/SKU, customer, address, delivery, and fulfillment, then rescan the page fields. Auto Scan skips risky action labels such as submit, confirm, place order, checkout, pay, purchase, reserve, delete, remove, and cancel.
+
 Automatic values:
 
 ```text

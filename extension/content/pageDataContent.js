@@ -23,6 +23,17 @@
 
   const extensionApi = globalThis.browser && globalThis.browser.runtime ? globalThis.browser : chrome;
   const runtime = extensionApi.runtime;
+  const AUTOMATION_KEYWORDS = Object.freeze(['order', 'quote', 'sku', 'product', 'customer', 'address', 'delivery', 'fulfillment']);
+  const DANGEROUS_CLICK_TEXT = Object.freeze(['submit', 'confirm', 'place order', 'checkout', 'pay', 'payment', 'purchase', 'reserve', 'delete', 'remove', 'cancel', 'sign out', 'logout']);
+  const AUTOMATION_SELECTOR = [
+    'button',
+    'a',
+    'summary',
+    '[role="button"]',
+    '[role="tab"]',
+    '[aria-controls]',
+    '[data-testid]',
+  ].join(',');
   let activeTimer = null;
   let stopTimer = null;
   let activeConfig = null;
@@ -30,10 +41,22 @@
   let lastUrl = location.href;
   let scanSequence = 0;
 
-  runtime.onMessage.addListener((message) => {
+  runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message && message.type === 'CONFIG_UPDATED') {
       loadAndStart();
     }
+    if (message && message.type === 'RUN_ORDER_AUTOMATION') {
+      if (typeof sendResponse !== 'function') {
+        return runOrderAutomation()
+          .then((result) => ({ success: true, ...result }))
+          .catch((err) => ({ success: false, error: err.message }));
+      }
+      runOrderAutomation()
+        .then((result) => sendResponse({ success: true, ...result }))
+        .catch((err) => sendResponse({ success: false, error: err.message }));
+      return true;
+    }
+    return undefined;
   });
 
   loadAndStart();
@@ -77,6 +100,7 @@
   }
 
   async function scanDomWatchers() {
+    let capturedCount = 0;
     for (const watcher of DOM_WATCHERS) {
       const path = buildDomWatcherPath(watcher);
       const values = readDomWatcherValues(watcher);
@@ -96,8 +120,89 @@
             valueType: 'dom-text',
           },
         });
+        capturedCount++;
       }
     }
+    return capturedCount;
+  }
+
+  async function runOrderAutomation() {
+    if (!activeConfig) {
+      const response = await sendRuntimeMessage({ type: 'GET_CONFIG' });
+      if (response && response.success) activeConfig = response.data;
+    }
+
+    const clickedLabels = [];
+    let capturedCount = await scanDomWatchers();
+    const candidates = getAutomationCandidates().slice(0, 24);
+
+    for (const candidate of candidates) {
+      candidate.element.scrollIntoView({ block: 'center', inline: 'nearest' });
+      await wait(150);
+      candidate.element.click();
+      clickedLabels.push(candidate.label);
+      await wait(650);
+      capturedCount += await scanDomWatchers();
+    }
+
+    return {
+      clickedCount: clickedLabels.length,
+      capturedCount,
+      clickedLabels,
+    };
+  }
+
+  function getAutomationCandidates() {
+    const candidates = [];
+    const seen = new Set();
+    const elements = document.querySelectorAll(AUTOMATION_SELECTOR);
+
+    for (const element of elements) {
+      const clickable = getClickableElement(element);
+      if (!clickable || seen.has(clickable)) continue;
+      const label = getElementLabel(clickable);
+      const normalizedLabel = label.toLowerCase();
+      if (!normalizedLabel || !isVisible(clickable) || isDisabled(clickable)) continue;
+      if (!AUTOMATION_KEYWORDS.some((keyword) => normalizedLabel.includes(keyword))) continue;
+      if (DANGEROUS_CLICK_TEXT.some((keyword) => normalizedLabel.includes(keyword))) continue;
+      seen.add(clickable);
+      candidates.push({ element: clickable, label: label.slice(0, 80) });
+    }
+
+    return candidates.sort((a, b) => getAutomationPriority(a.label) - getAutomationPriority(b.label));
+  }
+
+  function getClickableElement(element) {
+    return element.closest('button, a, summary, [role="button"], [role="tab"], [aria-controls], [tabindex]') || element;
+  }
+
+  function getElementLabel(element) {
+    return normalizeText([
+      element.getAttribute('aria-label'),
+      element.getAttribute('title'),
+      element.getAttribute('data-testid'),
+      element.textContent,
+    ].filter(Boolean).join(' '));
+  }
+
+  function getAutomationPriority(label) {
+    const normalizedLabel = label.toLowerCase();
+    const index = AUTOMATION_KEYWORDS.findIndex((keyword) => normalizedLabel.includes(keyword));
+    return index === -1 ? AUTOMATION_KEYWORDS.length : index;
+  }
+
+  function isVisible(element) {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+  }
+
+  function isDisabled(element) {
+    return element.disabled || element.getAttribute('aria-disabled') === 'true';
+  }
+
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   function readDomWatcherValues(watcher) {
